@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/all.min.css">
+    <style>
+        body {
+            padding-bottom: 70px;
+        }
+    </style>
+    <title>Tetris en JavaScript by Parzibyte - Jugar tetris en línea</title>
+</head>
+<body>
+<main>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12 text-center">
+                <h1>Amblyotris</h1>
+            </div>
+            <div class="col-12 text-center" id="game">
+                <h2 id="txtScore"></h2>
+                <canvas id="cnvBoard"></canvas>
+                <div class="mt-2">
+                    <button id="btnPlay" class="btn btn-success"><i class="fas fa-play"></i></button>
+                    <button id="btnPause" class="btn btn-success" hidden><i class="fas fa-pause"></i></button>
+                    <button id="btnLeft" class="btn btn-success"><i class="fas fa-arrow-left"></i></button>
+                    <button id="btnDown" class="btn btn-success"><i class="fas fa-arrow-down"></i></button>
+                    <button id="btnRight" class="btn btn-success"><i class="fas fa-arrow-right"></i></button>
+                    <button id="btnRotate" class="btn btn-success"><i class="fas fa-undo"></i></button>
+                    <button id="btnReset" class="btn btn-danger">Reset</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>
+<script src="js/index.js"></script>
+<script>initAmblyotris(document.getElementById("game"))</script>
+</body>
+</html>

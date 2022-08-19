@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "module": "ES6",
+    "moduleResolution": "node",
+    "lib": ["ES6", "DOM" ],
+    "noImplicitAny": true,
+    "removeComments": true,
+    "preserveConstEnums": true,
+    "sourceMap": true,
+    "allowSyntheticDefaultImports": true,
+    "declaration": false,
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "allowJs": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src/*.ts"],
+  "exclude": ["node_modules"]
+ }
