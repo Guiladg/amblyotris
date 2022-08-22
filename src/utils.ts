@@ -1,6 +1,6 @@
 class Utils {
 	// Possible figure or dot colors
-	static COLORS = ['#FF0000', '#0000FF'];
+	static COLORS = ['#FF0000', '#0000FF', '#444444'];
 
 	/**
 	 * Returns a random rumber from a range
@@ -17,9 +17,7 @@ class Utils {
 	 * @returns string
 	 */
 	static getRandomColor(): string {
-		return Utils.COLORS[
-			Utils.getRandomNumberInRange(0, Utils.COLORS.length - 1)
-		];
+		return Utils.COLORS[Utils.getRandomNumberInRange(0, Utils.COLORS.length - 1)];
 	}
 
 	/**
