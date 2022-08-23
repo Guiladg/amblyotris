@@ -20,34 +20,22 @@ class Tetromino {
 		this.rotationIndex = 0;
 		this.points = this.rotations[this.rotationIndex];
 		const randomColor = Utils.getRandomColor();
-		this.rotations.forEach((points) => {
-			points.forEach((point) => {
+		// Sets color and direction for each point if not already set
+		this.rotations.forEach((rotation) => {
+			rotation.forEach((point, i) => {
 				if (options.variant === 'highContrast') {
 					// 3 lines
-					// Gets true or false randomly, then will be converted to 0 or 1, to get color from array
-					let colorPos = Boolean(Math.round(Math.random()));
-					point.color = [
-						Utils.COLORS[Number(colorPos)],
-						Utils.COLORS[Number(!colorPos)],
-						Utils.COLORS[Number(colorPos)],
-					];
+					point.color ??= [Utils.COLORS[1], Utils.COLORS[2], Utils.COLORS[3]];
+					// One block vertical, one block horizontal
+					point.direction ??= i % 2 === 0 ? 'vertical' : 'horizontal';
 				} else if (options.variant === 'veryHighContrast') {
 					// 5 lines
-					// Gets true or false randomly, then will be converted to 0 or 1, to get color from array
-					let colorPos = Boolean(Math.round(Math.random()));
-					point.color = [
-						Utils.COLORS[Number(!colorPos)],
-						Utils.COLORS[Number(colorPos)],
-						Utils.COLORS[Number(!colorPos)],
-						Utils.COLORS[Number(colorPos)],
-						Utils.COLORS[Number(!colorPos)],
-					];
-				} else if (options.variant === 'mixedColor') {
-					// Each point different color
-					point.color = [Utils.getRandomColor()];
+					point.color ??= [Utils.COLORS[0], Utils.COLORS[1], Utils.COLORS[2], Utils.COLORS[3], Utils.COLORS[4]];
+					// One block vertical, one block horizontal
+					point.direction ??= i % 2 === 0 ? 'vertical' : 'horizontal';
 				} else {
 					// Same color figure
-					point.color = [randomColor];
+					point.color ??= [randomColor];
 				}
 			});
 		});

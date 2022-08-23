@@ -3,7 +3,9 @@ import Tetromino from './tetromino';
 import Utils from './utils';
 import Swal from 'sweetalert2';
 
-type BoardPoint = { taken: boolean; color: string[]; x: number; y: number };
+interface BoardPoint extends Point {
+	taken: boolean;
+}
 
 export interface GameOptions {
 	variant: 'fullColor' | 'mixedColor' | 'highContrast' | 'highContrast';
@@ -26,20 +28,17 @@ class Game {
 	static CANVAS_WIDTH = this.SQUARE_LENGTH * this.COLUMNS;
 	static CANVAS_HEIGHT = this.SQUARE_LENGTH * this.ROWS;
 
-	static BACKGROUND_COLOR = '#eaeaea';
-	static BACKGROUND_FILL = '#eaeaea';
-	static BACKGROUND_STROKE = '#ffffff';
-	static BORDER_COLOR = '#ffffff';
+	static BACKGROUND_FILL = '#000000';
+	static BACKGROUND_STROKE = '#222222';
+	static BORDER_COLOR = 'transparent';
 	static DELETED_ROW_COLOR = ['#FF00FF', '#00FFFF', '#FF00FF', '#00FFFF', '#FF00FF', '#00FFFF', '#FF00FF', '#00FFFF'];
 
 	// When a piece collapses with something at its bottom, how many time wait for putting another piece? (in ms)
 	static TIMEOUT_LOCK_PUT_NEXT_PIECE = 300;
 	// Speed of falling piece (in ms)
-	static PIECE_SPEED = 400;
+	static PIECE_SPEED = 500;
 	// Animation time when a row is being deleted
 	static DELETE_ROW_ANIMATION = 500;
-	// Score to add when a square dissapears (for each square)
-	static PER_SQUARE_SCORE = 1;
 
 	options: GameOptions;
 	flagTimeout: boolean;
@@ -51,6 +50,7 @@ class Game {
 	paused: boolean;
 	currentFigure: Tetromino;
 	nextFigure: Tetromino;
+	subNextFigure: Tetromino;
 	sounds: {
 		success: HTMLMediaElement;
 		background: HTMLMediaElement;
@@ -60,16 +60,18 @@ class Game {
 	canPlay: boolean;
 	intervalId: NodeJS.Timeout;
 	score: number;
+	rows: number;
 
-	$btnDown: HTMLElement;
-	$btnRight: HTMLElement;
-	$btnLeft: HTMLElement;
-	$btnRotate: HTMLElement;
-	$btnHardDrop: HTMLElement;
-	$btnPause: HTMLElement;
-	$btnResume: HTMLElement;
-	$txtScore: HTMLElement;
-	$btnReset: HTMLElement;
+	$btnDown: HTMLElement[];
+	$btnRight: HTMLElement[];
+	$btnLeft: HTMLElement[];
+	$btnRotate: HTMLElement[];
+	$btnHardDrop: HTMLElement[];
+	$btnPause: HTMLElement[];
+	$btnResume: HTMLElement[];
+	$txtScore: HTMLElement[];
+	$txtRows: HTMLElement[];
+	$btnReset: HTMLElement[];
 
 	$baseEl: HTMLElement;
 	$gameBoard: HTMLElement;
@@ -78,12 +80,18 @@ class Game {
 	$cnvActive: HTMLCanvasElement;
 	$cnvFront: HTMLCanvasElement;
 	$nextFigure: HTMLElement;
+	$subNextFigure: HTMLElement;
 	$cnvNext: HTMLCanvasElement;
+	$cnvSubNext: HTMLCanvasElement;
+	$cnvMessage: HTMLCanvasElement;
 	canvasBack: CanvasRenderingContext2D;
 	canvasStack: CanvasRenderingContext2D;
 	canvasActive: CanvasRenderingContext2D;
 	canvasFront: CanvasRenderingContext2D;
 	canvasNext: CanvasRenderingContext2D;
+	canvasSubNext: CanvasRenderingContext2D;
+	canvasMessage: CanvasRenderingContext2D;
+	$msg: HTMLElement;
 
 	constructor(baseEl: any, options?: GameOptions) {
 		let defaults: GameOptions = { variant: 'fullColor' };
@@ -108,6 +116,7 @@ class Game {
 	 */
 	resetGame = () => {
 		this.score = 0;
+		this.rows = 0;
 		this.sounds.success.currentTime = 0;
 		this.sounds.success.pause();
 		this.sounds.background.currentTime = 0;
@@ -126,23 +135,7 @@ class Game {
 	 * Shows welcome message
 	 */
 	showWelcome = () => {
-		Swal.fire(
-			'Bienvenido',
-			`Port casi perfecto del juego de Tetris en JavaScript.
-<br>
-<strong>Controles:</strong>
-<ul class="list-group">
-<li class="list-group-item"> <kbd>P</kbd><br>Pausar o reanudar </li>
-<li class="list-group-item"> <kbd>R</kbd><br>Rotar</li>
-<li class="list-group-item"> <kbd>Flechas de dirección</kbd><br>Mover figura hacia esa dirección</li>
-<li class="list-group-item"><strong>También puedes usar los botones si estás en móvil</strong></li>
-</ul>
-<strong>Creado por <a href="https://parzibyte.me/blog">Parzibyte</a></strong>
-<br>
-Gracias a <a target="_blank" href="https://www.youtube.com/channel/UCz6zvgkf6eKpgqlUZQstOtQ">Bulby</a> por la música de fondo
-y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a> por el sonido al completar una línea
-`
-		);
+		Swal.fire('Bienvenido', `Versión del Tetris para personas com ambliopía. Para usar con anteojos rojos/azules.`).then(() => this.resumeGame());
 	};
 
 	/**
@@ -151,9 +144,6 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 	initControls = () => {
 		document.addEventListener('keydown', (e) => {
 			const { code } = e;
-			if (!this.canPlay && code !== 'KeyP') {
-				return;
-			}
 			switch (code) {
 				case 'ArrowRight':
 					this.attemptMoveRight();
@@ -176,35 +166,48 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 			}
 		});
 
-		this.$btnDown.addEventListener('mousedown', () => {
-			this.attemptMoveDown();
-		});
-		this.$btnRight.addEventListener('mousedown', () => {
-			this.attemptMoveRight();
-		});
-		this.$btnLeft.addEventListener('mousedown', () => {
-			this.attemptMoveLeft();
-		});
-		this.$btnRotate.addEventListener('mousedown', () => {
-			this.attemptRotate();
-		});
-		this.$btnHardDrop.addEventListener('mousedown', () => {
-			this.hardDrop();
-		});
-		[this.$btnPause, this.$btnResume].forEach(($btn) =>
+		this.$btnDown.forEach((btn) =>
+			btn.addEventListener('mousedown', () => {
+				this.attemptMoveDown();
+			})
+		);
+		this.$btnRight.forEach((btn) =>
+			btn.addEventListener('mousedown', () => {
+				this.attemptMoveRight();
+			})
+		);
+		this.$btnLeft.forEach((btn) =>
+			btn.addEventListener('mousedown', () => {
+				this.attemptMoveLeft();
+			})
+		);
+		this.$btnRotate.forEach((btn) =>
+			btn.addEventListener('mousedown', () => {
+				this.attemptRotate();
+			})
+		);
+		this.$btnHardDrop.forEach((btn) =>
+			btn.addEventListener('mousedown', () => {
+				this.hardDrop();
+			})
+		);
+		[...this.$btnPause, ...this.$btnResume].forEach(($btn) =>
 			$btn.addEventListener('click', () => {
 				this.pauseOrResumeGame();
 			})
 		);
-		this.$btnReset.addEventListener('click', () => {
-			this.askUserConfirmResetGame();
-		});
+		this.$btnReset.forEach((btn) =>
+			btn.addEventListener('click', () => {
+				this.askUserConfirmResetGame();
+			})
+		);
 	};
 
 	/**
 	 * Moves current figure right
 	 */
 	attemptMoveRight = () => {
+		if (!this.canPlay) return;
 		if (this.figureCanMoveRight()) {
 			this.globalX++;
 		}
@@ -214,6 +217,7 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 	 * Moves current figure left
 	 */
 	attemptMoveLeft = () => {
+		if (!this.canPlay) return;
 		if (this.figureCanMoveLeft()) {
 			this.globalX--;
 		}
@@ -223,9 +227,9 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 	 * Moves current figure down
 	 */
 	attemptMoveDown = () => {
+		if (!this.canPlay) return;
 		if (this.figureCanMoveDown()) {
 			this.globalY++;
-			this.score++;
 		}
 	};
 
@@ -233,12 +237,14 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 	 * Drops figure to the end
 	 */
 	hardDrop = () => {
+		if (!this.canPlay) return;
 		// Flags hard drop for mainloop
 		this.flagHardDrop = true;
 		// Downs figure till end
 		while (this.figureCanMoveDown()) {
 			this.globalY++;
 			this.score++;
+			this.refreshScore();
 		}
 		// Process positions
 		this.endFallingProcess();
@@ -248,6 +254,7 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 	 * Rotates current figure
 	 */
 	attemptRotate = () => {
+		if (!this.canPlay) return;
 		this.rotateFigure();
 	};
 
@@ -257,12 +264,12 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 	pauseOrResumeGame = () => {
 		if (this.paused) {
 			this.resumeGame();
-			this.$btnResume.hidden = true;
-			this.$btnPause.hidden = false;
+			this.$btnResume.forEach((btn) => (btn.hidden = true));
+			this.$btnPause.forEach((btn) => (btn.hidden = false));
 		} else {
 			this.pauseGame();
-			this.$btnResume.hidden = false;
-			this.$btnPause.hidden = true;
+			this.$btnResume.forEach((btn) => (btn.hidden = false));
+			this.$btnPause.forEach((btn) => (btn.hidden = true));
 		}
 	};
 
@@ -274,6 +281,7 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 		this.paused = true;
 		this.canPlay = false;
 		clearInterval(this.intervalId);
+		this.setMessage('▐ ▌', { font: 'bold 30px Arial' });
 	};
 
 	/**
@@ -281,10 +289,20 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 	 */
 	resumeGame = () => {
 		//this.sounds.background.play();
-		this.refreshScore();
-		this.paused = false;
-		this.canPlay = true;
-		this.intervalId = setInterval(this.mainLoop.bind(this), Game.PIECE_SPEED);
+		this.setMessage('3');
+		setTimeout(() => {
+			this.setMessage('2');
+		}, 350);
+		setTimeout(() => {
+			this.setMessage('1');
+		}, 700);
+		setTimeout(() => {
+			this.hideMessage();
+			this.refreshScore();
+			this.paused = false;
+			this.canPlay = true;
+			this.intervalId = setInterval(this.mainLoop.bind(this), Game.PIECE_SPEED);
+		}, 1050);
 	};
 
 	moveFigurePointsToExistingPieces = () => {
@@ -294,9 +312,7 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 			point.y += this.globalY;
 			this.existingPieces[point.y][point.x] = {
 				taken: true,
-				color: point.color,
-				x: point.x,
-				y: point.y
+				...point
 			};
 		}
 		this.restartGlobalXAndY();
@@ -315,27 +331,24 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 	};
 
 	getPointsToDelete = (): number[] => {
-		const points: number[] = [];
-		let y = 0;
-		for (const row of this.existingPieces) {
-			const isRowFull = row.every((point) => point.taken);
-			if (isRowFull) {
-				// We only need the Y coordinate
-				points.push(y);
+		const deletableRows: number[] = [];
+		this.existingPieces.forEach((row, y) => {
+			// If every point in row is taken, push row number
+			if (row.every((point) => point.taken)) {
+				deletableRows.push(y);
 			}
-			y++;
-		}
-		return points;
+		});
+		console.log('~ points', deletableRows);
+		return deletableRows;
 	};
 
-	changeDeletedRowColor = (yCoordinates: number[]) => {
+	changeDeletedRowColor = (deletableRows: number[]) => {
 		const wait = Game.DELETE_ROW_ANIMATION / 5;
 		const drawDeletedRows = () => {
 			this.clearCanvas(this.canvasFront);
-			for (const y of yCoordinates) {
+			for (const y of deletableRows) {
 				for (let x = 0; x < Game.COLUMNS; x++) {
-					let drawingPoint: BoardPoint = {
-						taken: true,
+					let drawingPoint: Point = {
 						color: Game.DELETED_ROW_COLOR,
 						x: x,
 						y: y
@@ -352,13 +365,15 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 	};
 
 	addScore = (rows: number[]) => {
-		this.score += Game.PER_SQUARE_SCORE * Game.COLUMNS * rows.length;
+		// 1 line 40, 2 lines 100, 3 lines 30, 4 lines 1200
+		let score = [0, 40, 100, 300, 1200];
+		this.score += score[rows.length];
+		this.rows += rows.length;
 		this.refreshScore();
 	};
 
 	/**
-	 * Returns aan empty row
-	 * @param x
+	 * Returns an empty row
 	 * @param y
 	 * @returns
 	 */
@@ -367,7 +382,6 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 		for (let x = 0; x < Game.COLUMNS; x++) {
 			row.push({
 				taken: false,
-				color: [Game.BACKGROUND_COLOR],
 				x,
 				y
 			});
@@ -377,20 +391,18 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 
 	/**
 	 * Removes the rows defined in the array from the existing pieces matrix
-	 * @param yCoordinates
+	 * @param {number[]} deletableRows
 	 */
-	removeRowsFromExistingPieces = (yCoordinates: number[]) => {
-		// Creates an array with the inverted list of rows to delete
-		const invertedCoordinates = [...yCoordinates].reverse();
+	removeRowsFromExistingPieces = (deletableRows: number[]) => {
 		// Iterate through the deleted rows
-		for (let yCoordinate of invertedCoordinates) {
-			// Iterate through every row in existing pieces matrix from botton to top
-			// starting on the deleted row
+		for (let yCoordinate of deletableRows) {
+			// Iterate through every row in existing pieces matrix,
+			// from botton to top, starting from the deleted row
 			for (let y = yCoordinate; y >= 0; y--) {
 				if (y > 0) {
-					// Creates a copy of the previous row one on the deleted row
+					// Move row downwards
 					this.existingPieces[y] = [...this.existingPieces[y - 1]];
-					// Corrects the y position
+					// Corrects the y position on every point
 					this.existingPieces[y].forEach((row, x) => (this.existingPieces[y][x].y = y));
 				} else {
 					// Add an empty row to the top
@@ -401,17 +413,25 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 	};
 
 	verifyAndDeleteFullRows = () => {
-		// Here be dragons
-		const yCoordinates = this.getPointsToDelete();
-		if (yCoordinates.length <= 0) return;
-		this.addScore(yCoordinates);
+		// Check deletable rows
+		const deletableRows = this.getPointsToDelete();
+		if (!deletableRows.length) return;
+
+		// Stop and play sound
+		this.addScore(deletableRows);
+		this.sounds.success.pause();
 		this.sounds.success.currentTime = 0;
 		this.sounds.success.play();
+		// Stop falling process
 		this.canPlay = false;
-		this.changeDeletedRowColor(yCoordinates);
+		// Paint deletable rows
+		this.changeDeletedRowColor(deletableRows);
+		// Wait for the deletion animation
 		setTimeout(() => {
-			this.removeRowsFromExistingPieces(yCoordinates);
+			// Remove rows
+			this.removeRowsFromExistingPieces(deletableRows);
 			this.drawStack();
+			// Restart falling process
 			this.canPlay = true;
 		}, Game.DELETE_ROW_ANIMATION);
 	};
@@ -491,12 +511,9 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 		if (!this.currentFigure) return;
 		this.clearCanvas(this.canvasActive);
 		for (const point of this.currentFigure.getPoints()) {
-			let drawingPoint: BoardPoint = {
-				taken: true,
-				color: point.color,
-				x: point.x + this.globalX,
-				y: point.y + this.globalY
-			};
+			let drawingPoint = { ...point };
+			drawingPoint.x += this.globalX;
+			drawingPoint.y += this.globalY;
 			this.drawPoint(this.canvasActive, drawingPoint);
 		}
 	};
@@ -521,35 +538,40 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 	 * Draws the stack of figures
 	 */
 	drawNext = () => {
-		if (!this.nextFigure) return;
-		this.clearCanvas(this.canvasNext);
-		const points = this.nextFigure.getPoints();
-		let offsetX = 0;
-		let offsetY = 0;
-		if (points.find((p) => p.x === 3)) {
-			offsetX = 0;
-			offsetY = 0.5;
-		} else if (points.find((p) => p.x === 2)) {
-			offsetX = 0.5;
-			offsetY = 0;
-		} else {
-			offsetX = 1;
-			offsetY = 0;
-		}
-		for (const point of points) {
-			let drawingPoint: Point = {
-				color: point.color,
-				x: point.x + offsetX,
-				y: point.y + offsetY
-			};
-			this.drawPoint(this.canvasNext, drawingPoint);
-		}
+		const draw = (figure: Tetromino, canvas: CanvasRenderingContext2D) => {
+			if (!figure) return;
+			this.clearCanvas(canvas);
+			const points = figure.getPoints();
+			let offsetX;
+			let offsetY;
+			if (points.find((p) => p.x === 3)) {
+				// Figure I needs half block to center verticaly
+				offsetX = 0;
+				offsetY = 0.5;
+			} else if (points.find((p) => p.x === 2)) {
+				// The rest needs half block to center horizontaly
+				offsetX = 0.5;
+				offsetY = 0;
+			} else {
+				// Figure O needs one block to center horizontaly
+				offsetX = 1;
+				offsetY = 0;
+			}
+			for (const point of points) {
+				let drawingPoint = { ...point };
+				drawingPoint.x += offsetX;
+				drawingPoint.y += offsetY;
+				this.drawPoint(canvas, drawingPoint);
+			}
+		};
+		draw(this.nextFigure, this.canvasNext);
+		draw(this.subNextFigure, this.canvasSubNext);
 	};
 
 	/**
 	 * Draws onw point on the selected canvas
 	 * @param {CanvasRenderingContext2D} canvasContext
-	 * @param {BoardPoint} point
+	 * @param {BoardPoint | Point} point
 	 */
 	drawPoint = (canvasContext: CanvasRenderingContext2D, point: BoardPoint | Point, shade = true) => {
 		let x = point.x * Game.SQUARE_LENGTH;
@@ -557,36 +579,40 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 
 		// Background
 		let colorItem = 0;
-		let barHeight = Game.SQUARE_LENGTH / point.color.length;
+		let barLength = Game.SQUARE_LENGTH / point.color.length;
 		for (const color of point.color) {
 			canvasContext.fillStyle = color;
-			canvasContext.fillRect(x, y + barHeight * colorItem, Game.SQUARE_LENGTH, Game.SQUARE_LENGTH / point.color.length);
+			if (point.direction === 'vertical') {
+				canvasContext.fillRect(x + barLength * colorItem, y, Game.SQUARE_LENGTH / point.color.length, Game.SQUARE_LENGTH);
+			} else {
+				canvasContext.fillRect(x, y + barLength * colorItem, Game.SQUARE_LENGTH, Game.SQUARE_LENGTH / point.color.length);
+			}
 			colorItem++;
 		}
 		if (shade) {
 			// Shade top
-			canvasContext.fillStyle = '#FFFFFF66';
+			canvasContext.fillStyle = '#FFFFFF44';
 			canvasContext.beginPath();
 			canvasContext.moveTo(x, y);
 			canvasContext.lineTo(x + Game.SQUARE_LENGTH, y);
 			canvasContext.lineTo(x + Game.SQUARE_LENGTH / 2, y + Game.SQUARE_LENGTH / 2);
 			canvasContext.fill();
 			// Shade right
-			canvasContext.fillStyle = '#00000033';
+			canvasContext.fillStyle = '#00000022';
 			canvasContext.beginPath();
 			canvasContext.moveTo(x + Game.SQUARE_LENGTH, y);
 			canvasContext.lineTo(x + Game.SQUARE_LENGTH, y + Game.SQUARE_LENGTH);
 			canvasContext.lineTo(x + Game.SQUARE_LENGTH / 2, y + Game.SQUARE_LENGTH / 2);
 			canvasContext.fill();
 			// Shade bottom
-			canvasContext.fillStyle = '#00000066';
+			canvasContext.fillStyle = '#00000044';
 			canvasContext.beginPath();
 			canvasContext.moveTo(x, y + Game.SQUARE_LENGTH);
 			canvasContext.lineTo(x + Game.SQUARE_LENGTH, y + Game.SQUARE_LENGTH);
 			canvasContext.lineTo(x + Game.SQUARE_LENGTH / 2, y + Game.SQUARE_LENGTH / 2);
 			canvasContext.fill();
 			// Shade left
-			canvasContext.fillStyle = '#FFFFFF33';
+			canvasContext.fillStyle = '#FFFFFF22';
 			canvasContext.beginPath();
 			canvasContext.moveTo(x, y);
 			canvasContext.lineTo(x + Game.SQUARE_LENGTH, y);
@@ -602,8 +628,31 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 	 * Sets the score label from the variable
 	 */
 	refreshScore = () => {
-		if (!this.$txtScore) return;
-		this.$txtScore.textContent = String(this.score);
+		if (this.$txtScore?.length) {
+			this.$txtScore.forEach((txt) => (txt.textContent = String(this.score)));
+		}
+		if (this.$txtRows?.length) {
+			this.$txtRows.forEach((txt) => (txt.textContent = String(this.rows)));
+		}
+	};
+
+	/**
+	 * Sets the message label
+	 */
+	setMessage = (text: string, options?: { font?: string; fillStyle?: string }) => {
+		this.clearCanvas(this.canvasMessage);
+		this.canvasMessage.textAlign = 'center';
+		this.canvasMessage.fillStyle = options?.fillStyle ?? '#FFFFFF';
+		const font = options?.font ?? 'bold 50px Arial';
+		this.canvasMessage.font = font;
+		// Calculates veretical offset depending on font size (10 is for making it better)
+		const offsetY = Number(font.match(/\d+/)?.[0] ?? 0) / 2 - 10;
+		this.canvasMessage.fillText(text, Game.CANVAS_WIDTH / 2, Game.CANVAS_HEIGHT / 2 + offsetY);
+		this.$cnvMessage.style.opacity = '1';
+	};
+	hideMessage = () => {
+		this.$cnvMessage.style.opacity = '0';
+		setTimeout(() => this.clearCanvas(this.canvasMessage), 300);
 	};
 
 	/**
@@ -622,37 +671,53 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 	 * Initializes DOM elements and creates canvases
 	 */
 	initDomElements = () => {
-		this.$txtScore = this.$baseEl.querySelector('#txtScore');
-		this.$btnPause = this.$baseEl.querySelector('#btnPause');
-		this.$btnResume = this.$baseEl.querySelector('#btnPlay');
-		this.$btnRotate = this.$baseEl.querySelector('#btnRotate');
-		this.$btnDown = this.$baseEl.querySelector('#btnDown');
-		this.$btnHardDrop = this.$baseEl.querySelector('#btnHardDrop');
-		this.$btnRight = this.$baseEl.querySelector('#btnRight');
-		this.$btnLeft = this.$baseEl.querySelector('#btnLeft');
-		this.$btnReset = this.$baseEl.querySelector('#btnReset');
+		this.$txtScore = Array.from(this.$baseEl.getElementsByClassName('txtScore') as HTMLCollectionOf<HTMLElement>);
+		this.$txtRows = Array.from(this.$baseEl.getElementsByClassName('txtRows') as HTMLCollectionOf<HTMLElement>);
+		this.$btnPause = Array.from(this.$baseEl.getElementsByClassName('btnPause') as HTMLCollectionOf<HTMLElement>);
+		this.$btnResume = Array.from(this.$baseEl.getElementsByClassName('btnPlay') as HTMLCollectionOf<HTMLElement>);
+		this.$btnRotate = Array.from(this.$baseEl.getElementsByClassName('btnRotate') as HTMLCollectionOf<HTMLElement>);
+		this.$btnDown = Array.from(this.$baseEl.getElementsByClassName('btnDown') as HTMLCollectionOf<HTMLElement>);
+		this.$btnHardDrop = Array.from(this.$baseEl.getElementsByClassName('btnHardDrop') as HTMLCollectionOf<HTMLElement>);
+		this.$btnRight = Array.from(this.$baseEl.getElementsByClassName('btnRight') as HTMLCollectionOf<HTMLElement>);
+		this.$btnLeft = Array.from(this.$baseEl.getElementsByClassName('btnLeft') as HTMLCollectionOf<HTMLElement>);
+		this.$btnReset = Array.from(this.$baseEl.getElementsByClassName('btnReset') as HTMLCollectionOf<HTMLElement>);
 
 		// Creates canvases for board and current element falling
-		this.$gameBoard = this.$baseEl.querySelector('#gameBoard');
+		const gameBoard = this.$baseEl.getElementsByClassName('gameBoard');
+
+		if (!gameBoard.length) {
+			console.error('An element with lcass gameBoard is mandatory to initialize.');
+			return;
+		}
+		this.$gameBoard = gameBoard[0] as HTMLElement;
+		this.$gameBoard.style.position = 'relative';
 
 		this.$cnvBack = document.createElement('canvas');
 		this.$cnvBack.setAttribute('width', Game.CANVAS_WIDTH + 'px');
 		this.$cnvBack.setAttribute('height', Game.CANVAS_HEIGHT + 'px');
+		this.$cnvBack.style.width = '100%';
+		this.$cnvBack.style.height = '100%';
 		this.$cnvBack.style.zIndex = '0';
 		this.$cnvStack = document.createElement('canvas');
 		this.$cnvStack.setAttribute('width', Game.CANVAS_WIDTH + 'px');
 		this.$cnvStack.setAttribute('height', Game.CANVAS_HEIGHT + 'px');
 		this.$cnvStack.style.position = 'absolute';
+		this.$cnvStack.style.width = '100%';
+		this.$cnvStack.style.height = '100%';
 		this.$cnvStack.style.zIndex = '1';
 		this.$cnvActive = document.createElement('canvas');
 		this.$cnvActive.setAttribute('width', Game.CANVAS_WIDTH + 'px');
 		this.$cnvActive.setAttribute('height', Game.CANVAS_HEIGHT + 'px');
 		this.$cnvActive.style.position = 'absolute';
+		this.$cnvActive.style.width = '100%';
+		this.$cnvActive.style.height = '100%';
 		this.$cnvActive.style.zIndex = '2';
 		this.$cnvFront = document.createElement('canvas');
 		this.$cnvFront.setAttribute('width', Game.CANVAS_WIDTH + 'px');
 		this.$cnvFront.setAttribute('height', Game.CANVAS_HEIGHT + 'px');
 		this.$cnvFront.style.position = 'absolute';
+		this.$cnvFront.style.width = '100%';
+		this.$cnvFront.style.height = '100%';
 		this.$cnvFront.style.zIndex = '3';
 
 		this.$gameBoard.appendChild(this.$cnvStack);
@@ -666,13 +731,38 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 		this.canvasFront = this.$cnvFront.getContext('2d');
 
 		// Creates canvas for next figure
-		this.$nextFigure = this.$baseEl.querySelector('#nextFigure');
 		this.$cnvNext = document.createElement('canvas');
 		this.$cnvNext.setAttribute('width', Game.SQUARE_LENGTH * 4 + 'px');
 		this.$cnvNext.setAttribute('height', Game.SQUARE_LENGTH * 2 + 'px');
-		this.$nextFigure.appendChild(this.$cnvNext);
-
 		this.canvasNext = this.$cnvNext.getContext('2d');
+		const nextFigure = this.$baseEl.getElementsByClassName('nextFigure');
+		if (nextFigure.length) {
+			this.$nextFigure = nextFigure[0] as HTMLElement;
+			this.$nextFigure.appendChild(this.$cnvNext);
+		}
+		// Creates canvas for sub next figure
+		this.$cnvSubNext = document.createElement('canvas');
+		this.$cnvSubNext.setAttribute('width', Game.SQUARE_LENGTH * 4 + 'px');
+		this.$cnvSubNext.setAttribute('height', Game.SQUARE_LENGTH * 2 + 'px');
+		this.canvasSubNext = this.$cnvSubNext.getContext('2d');
+		const subNextFigure = this.$baseEl.getElementsByClassName('subNextFigure');
+		if (subNextFigure.length) {
+			this.$subNextFigure = subNextFigure[0] as HTMLElement;
+			this.$subNextFigure.appendChild(this.$cnvSubNext);
+		}
+
+		// Crates canvas for messages over canvases
+		this.$cnvMessage = document.createElement('canvas');
+		this.$cnvMessage.setAttribute('width', Game.CANVAS_WIDTH + 'px');
+		this.$cnvMessage.setAttribute('height', Game.CANVAS_HEIGHT + 'px');
+		this.$cnvMessage.style.position = 'absolute';
+		this.$cnvMessage.style.width = '100%';
+		this.$cnvMessage.style.height = '100%';
+		this.$cnvMessage.style.zIndex = '4';
+		this.$cnvMessage.style.opacity = '0';
+		this.$cnvMessage.style.transition = 'opacity 0.3s ease';
+		this.$gameBoard.appendChild(this.$cnvMessage);
+		this.canvasMessage = this.$cnvMessage.getContext('2d');
 	};
 
 	/**
@@ -692,7 +782,7 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 		let randomOption = Utils.getRandomNumberInRange(1, 7);
 		switch (randomOption) {
 			case 1: // O (smashboy)
-				randomFigure = new Tetromino([[new Point(0, 0), new Point(1, 0), new Point(0, 1), new Point(1, 1)]], this.options);
+				randomFigure = new Tetromino([[new Point(0, 0), new Point(1, 0), new Point(1, 1), new Point(0, 1)]], this.options);
 				break;
 			case 2: // I (hero)
 				randomFigure = new Tetromino(
@@ -700,6 +790,7 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 						[new Point(0, 0), new Point(1, 0), new Point(2, 0), new Point(3, 0)],
 						[new Point(0, 0), new Point(0, 1), new Point(0, 2), new Point(0, 3)]
 					],
+
 					this.options
 				);
 				break;
@@ -708,7 +799,7 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 					[
 						[new Point(0, 1), new Point(1, 1), new Point(2, 1), new Point(2, 0)],
 						[new Point(0, 0), new Point(0, 1), new Point(0, 2), new Point(1, 2)],
-						[new Point(0, 0), new Point(0, 1), new Point(1, 0), new Point(2, 0)],
+						[new Point(0, 1), new Point(0, 0), new Point(1, 0), new Point(2, 0)],
 						[new Point(0, 0), new Point(1, 0), new Point(1, 1), new Point(1, 2)]
 					],
 					this.options
@@ -746,10 +837,30 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 			case 7: // T (Teewee)
 				randomFigure = new Tetromino(
 					[
-						[new Point(0, 1), new Point(1, 1), new Point(1, 0), new Point(2, 1)],
-						[new Point(0, 0), new Point(0, 1), new Point(0, 2), new Point(1, 1)],
-						[new Point(0, 0), new Point(1, 0), new Point(2, 0), new Point(1, 1)],
-						[new Point(0, 1), new Point(1, 0), new Point(1, 1), new Point(1, 2)]
+						[
+							new Point({ x: 0, y: 1, direction: 'vertical' }),
+							new Point({ x: 1, y: 1, direction: 'horizontal' }),
+							new Point({ x: 2, y: 1, direction: 'vertical' }),
+							new Point({ x: 1, y: 0, direction: 'vertical' })
+						],
+						[
+							new Point({ x: 0, y: 0, direction: 'horizontal' }),
+							new Point({ x: 0, y: 1, direction: 'vertical' }),
+							new Point({ x: 0, y: 2, direction: 'horizontal' }),
+							new Point({ x: 1, y: 1, direction: 'horizontal' })
+						],
+						[
+							new Point({ x: 0, y: 0, direction: 'vertical' }),
+							new Point({ x: 1, y: 0, direction: 'horizontal' }),
+							new Point({ x: 2, y: 0, direction: 'vertical' }),
+							new Point({ x: 1, y: 1, direction: 'vertical' })
+						],
+						[
+							new Point({ x: 1, y: 0, direction: 'horizontal' }),
+							new Point({ x: 1, y: 1, direction: 'vertical' }),
+							new Point({ x: 1, y: 2, direction: 'horizontal' }),
+							new Point({ x: 0, y: 1, direction: 'horizontal' })
+						]
 					],
 					this.options
 				);
@@ -759,7 +870,8 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 				break;
 		}
 		this.currentFigure = this.nextFigure;
-		this.nextFigure = randomFigure;
+		this.nextFigure = this.subNextFigure;
+		this.subNextFigure = randomFigure;
 		// Only for the first time, recall the Fn to have current and next
 		if (!this.currentFigure) {
 			this.chooseRandomFigure();
@@ -777,7 +889,6 @@ y a <a href="https://freesound.org/people/grunz/sounds/109662/">Freesound.org</a
 			for (let x = 0; x < Game.COLUMNS; x++) {
 				this.existingPieces[y].push({
 					taken: false,
-					color: [Game.BACKGROUND_COLOR],
 					x,
 					y
 				});

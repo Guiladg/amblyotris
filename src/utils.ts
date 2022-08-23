@@ -1,6 +1,7 @@
 class Utils {
 	// Possible figure or dot colors
-	static COLORS = ['#FF0000', '#0000FF', '#444444'];
+	// blue, red, black, blue, red (ordered for striped blocks)
+	static COLORS = ['#0000FF', '#FF0000', '#444444', '#0000FF', '#FF0000'];
 
 	/**
 	 * Returns a random rumber from a range

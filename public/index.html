@@ -3,41 +3,283 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <link rel="stylesheet" href="css/bootstrap.min.css">
     <link rel="stylesheet" href="css/all.min.css">
     <style>
+        html, body {
+           height: 100%;
+        }
         body {
-            padding-bottom: 70px;
+            background: #efcc19;
+            padding: 0;
+            margin: 0;
+            width: 100%;
+        }
+        #game {
+            height: 100%;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 15px 15px 0 15px;
+        }
+        .center {
+            padding: 15px;
+            background: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            border: 4px solid;
+            border-color: #987f0f #fae36c #fae36c #987f0f;
+        }
+        .center .lateral {
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 30%;
+            margin-left: 5%;
+        }
+        .center .lateral canvas {
+            max-width: 100%;
+        }
+        .txtScore,
+        .txtRows {
+            font-size: 30px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .puntaje,
+        .filas,
+        .proximas {
+            text-transform: uppercase;
+            font-weight: 700;
+            display: block;
+            font-size: 14px;
+            text-align: center;
+        }
+        .proximas {
+            margin-bottom: 20px;
+        }
+        .nextFigure {
+            margin-bottom: 20px;
+        }
+        .main {
+            border: 2px solid white;
+            box-shadow: 0 0 20px #FFF8;
+            width: 100%;
+            padding: 2px;
+        }
+        .main_inner {
+            position: relative;
+            padding-top: 200%;
+            height: 100%;
+            width: 100%;
+        }
+        .gameBoard {
+            position: absolute !important;
+            top: 0;
+            height: 100%;
+            width: 100%;
+        }
+        .gameBoard canvas {
+            position: absolute;
+        }
+        .controls {
+            padding: 15px 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            margin-top: auto;
+        }
+        .controls .b {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            width: 100%;
+        }
+        .controls div {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .controls button {
+            border-radius: 50%;
+            border: 1.5px solid black;
+            border-color: #000 #333 #333 #000;
+            position: relative;
+            background: #884488;
+            color: white;
+        }
+        .controls button::before {
+            content: '';
+            box-shadow: inset 0 5px 10px hsl(0deg 0% 100% / 80%);
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            border-radius: 50%;
+        }
+        .controls button::after {
+            content: '';
+            box-shadow: inset 0 -5px 10px rgb(0 0 0 / 80%);
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            border-radius: 50%;
+        }
+        .controls button:focus {
+            outline: none;
+        }
+        .controls button:active::before {
+            box-shadow: inset 0 -3px 6px hsl(0deg 0% 100% / 60%);
+        }
+        .controls button:active::after {
+            box-shadow: inset 0 5px 5px rgb(0 0 0 / 60%);
+        }
+        .controls button:active i::before {
+            padding-top: 3px;
+        }
+        .controls .l {
+            flex-direction: column;
+        }
+        .controls .l button {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+        }
+        .controls .r button {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+        }
+        .controls .r div { 
+            width: auto;
+            margin: 0 -5px;
+        }
+        .controls .r .c {
+            flex-direction: column;
+        }
+        .controls .r .c button:nth-child(1) {
+            margin-bottom: 20px;
+        }
+        .controls .r .c button:nth-child(2) {
+            margin-top: 20px;
+        }
+        .controls .t div {
+            flex-direction: column;
+            font-weight: 700;
+            font-size: 70%;
+            line-height: 2;
+            text-transform: uppercase;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            padding-bottom: 35px;
+        }
+        .controls .t button {
+            border-radius: 10px;
+            height: 20px;
+            width: 50px;
+        }
+        .controls .t button::before,
+        .controls .t button::after {
+            border-radius: 5px;
+        }
+        h1 {
+            font-family: serif;
+            font-size: 25px;
+            margin: 0 0 auto 0;
+            padding: 0 0 10px 0;
+        }
+        .fa-power-off,
+        .fa-expand-alt {
+            font-size: 120%;
         }
     </style>
-    <title>Tetris en JavaScript by Parzibyte - Jugar tetris en línea</title>
+    <title>Amblyotris</title>
 </head>
 <body>
-<main>
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-12 text-center">
-                <h1>Amblyotris</h1>
-            </div>
-            <div class="col-12 text-center" id="game">
-                <h2 id="txtScore"></h2>
-                <canvas id="cnvBoard"></canvas>
-                <div class="mt-2">
-                    <button id="btnPlay" class="btn btn-success"><i class="fas fa-play"></i></button>
-                    <button id="btnPause" class="btn btn-success" hidden><i class="fas fa-pause"></i></button>
-                    <button id="btnLeft" class="btn btn-success"><i class="fas fa-arrow-left"></i></button>
-                    <button id="btnDown" class="btn btn-success"><i class="fas fa-arrow-down"></i></button>
-                    <button id="btnRight" class="btn btn-success"><i class="fas fa-arrow-right"></i></button>
-                    <button id="btnRotate" class="btn btn-success"><i class="fas fa-undo"></i></button>
-                    <button id="btnReset" class="btn btn-danger">Reset</button>
+    <div id="game">
+        <h1><img src="assets/logo.png" alt="AMBLYOTЯIS"></h1>
+        <div class="center">
+            <div class="main">
+                <div class="main_inner">
+                    <div class="gameBoard"></div>
                 </div>
             </div>
-
+            <div class="lateral">
+                <div class="puntaje">PUNTAJE</div>
+                <div class="txtScore"></div>
+                <div class="filas">FILAS<br/>ELIMINADAS</div>
+                <div class="txtRows"></div>
+                <div class="proximas">PRÓXIMAS<br/>PIEZAS</div>
+                <div class="nextFigure"></div>
+                <div class="subNextFigure"></div>
+            </div>
+        </div>
+        <div class="controls">
+            <div class="b">
+                <div class="l">
+                    <div class="t">
+                        <div>
+                            <button class="btnPlay"></button>
+                            <button class="btnPause" hidden></button>
+                            <span><i class="fas fa-play"></i> / <i class="fas fa-pause"></i></span>
+                        </div>
+                        <div>
+                            <button class="btnReset"></button>
+                            <span><i class="fas fa-power-off"></i></span>
+                        </div>
+                        <div>
+                            <button class="btnFullScreen"></button>
+                            <span><i class="fas fa-expand-alt"></i></span>
+                        </div>
+                    </div>
+                    <button class="btnHardDrop"><i class="fas fa-angle-double-down"></i></button>
+                </div>
+                <div class="r">
+                    <div class="pad">
+                        <div class="l">
+                            <button class="btnLeft"><i class="fas fa-angle-left"></i></button>
+                        </div>
+                        <div class="c">
+                            <button class="btnRotate"><i class="fas fa-redo"></i></button>    
+                            <button class="btnDown"><i class="fas fa-angle-down"></i></button>
+                        </div>
+                        <div class="r">
+                            <button class="btnRight"><i class="fas fa-angle-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</main>
-<script src="js/index.js"></script>
-<script>initAmblyotris(document.getElementById("game"))</script>
+    <script src="js/index.js"></script>
+    <script>
+        function toggleFullscreen(event) {
+            let element = document.documentElement;
+            if (event instanceof HTMLElement) {
+                element = event;
+            }
+            let isFullscreen = document.webkitIsFullScreen || document.mozFullScreen || false;
+            element.requestFullScreen = element.requestFullScreen || element.webkitRequestFullScreen || element.mozRequestFullScreen || function () { return false; };
+            document.cancelFullScreen = document.cancelFullScreen || document.webkitCancelFullScreen || document.mozCancelFullScreen || function () { return false; };
+            isFullscreen ? document.cancelFullScreen() : element.requestFullScreen();
+        }
+        document.querySelector('.btnFullScreen').addEventListener("click", toggleFullscreen);
+        initAmblyotris(document.getElementById("game"), { variant: 'fullColor' });
+    </script>
 </body>
 </html>
