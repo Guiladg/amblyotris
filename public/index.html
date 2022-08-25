@@ -113,7 +113,7 @@
         }
         .controls button {
             border-radius: 50%;
-            border: 1.5px solid black;
+            border: 2px solid black;
             border-color: #000 #333 #333 #000;
             position: relative;
             background: #884488;
@@ -197,22 +197,43 @@
         .controls .t button::after {
             border-radius: 5px;
         }
+        .title {
+            display: flex;
+            padding: 0 0 10px 0;
+            gap: 10px;
+        }
+        .title div { 
+            border: 2px solid;
+            border-color: #987f0f #fae36c #fae36c #987f0f;
+            background-color: #020304;
+            display: flex;
+            align-items: flex-end;
+            border-top-left-radius: 15px;
+            border-top-right-radius: 15px;
+            padding: 0 3px;
+        }
         h1 {
             font-family: serif;
             font-size: 25px;
             margin: 0 0 auto 0;
-            padding: 0 0 10px 0;
         }
         .fa-power-off,
         .fa-expand-alt {
             font-size: 120%;
+        }
+        body.swal2-height-auto {
+            height: 100% !important
         }
     </style>
     <title>Amblyotris</title>
 </head>
 <body>
     <div id="game">
-        <h1><img src="assets/logo.png" alt="AMBLYOTЯIS"></h1>
+        <div class="title">
+            <div><img src="assets/kosak1.gif" alt=""></div>
+            <h1><img src="assets/logo.png" alt="AMBLYOTЯIS"></h1>
+            <div><img src="assets/kosak2.gif" alt=""></div>
+        </div>
         <div class="center">
             <div class="main">
                 <div class="main_inner">

@@ -8,9 +8,7 @@ declare global {
 }
 
 if (window.initAmblyotris) {
-	console.error(
-		"Can't initialize Amblyotris. initAmblyotris function already set."
-	);
+	console.error("Can't initialize Amblyotris. initAmblyotris function already set.");
 } else {
 	window.initAmblyotris = (element: HTMLElement, options?: GameOptions) => {
 		if (!element) {

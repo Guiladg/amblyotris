@@ -25,8 +25,8 @@ class Game {
 	static SQUARE_LENGTH = screen.width > 420 ? 30 : 20;
 	static COLUMNS = 10;
 	static ROWS = 20;
-	static CANVAS_WIDTH = this.SQUARE_LENGTH * this.COLUMNS;
-	static CANVAS_HEIGHT = this.SQUARE_LENGTH * this.ROWS;
+	static CANVAS_WIDTH = Game.SQUARE_LENGTH * Game.COLUMNS;
+	static CANVAS_HEIGHT = Game.SQUARE_LENGTH * Game.ROWS;
 
 	static BACKGROUND_FILL = '#000000';
 	static BACKGROUND_STROKE = '#222222';
@@ -36,7 +36,7 @@ class Game {
 	// When a piece collapses with something at its bottom, how many time wait for putting another piece? (in ms)
 	static TIMEOUT_LOCK_PUT_NEXT_PIECE = 300;
 	// Speed of falling piece (in ms)
-	static PIECE_SPEED = 500;
+	static PIECE_SPEED = 900;
 	// Animation time when a row is being deleted
 	static DELETE_ROW_ANIMATION = 500;
 
@@ -59,8 +59,8 @@ class Game {
 	};
 	canPlay: boolean;
 	intervalId: NodeJS.Timeout;
-	score: number;
-	rows: number;
+	scorePoints: number;
+	scoreRows: number;
 
 	$btnDown: HTMLElement[];
 	$btnRight: HTMLElement[];
@@ -115,8 +115,8 @@ class Game {
 	 * Reinitializes game values
 	 */
 	resetGame = () => {
-		this.score = 0;
-		this.rows = 0;
+		this.scorePoints = 0;
+		this.scoreRows = 0;
 		this.sounds.success.currentTime = 0;
 		this.sounds.success.pause();
 		this.sounds.background.currentTime = 0;
@@ -135,11 +135,14 @@ class Game {
 	 * Shows welcome message
 	 */
 	showWelcome = () => {
-		Swal.fire('Bienvenido', `Versión del Tetris para personas com ambliopía. Para usar con anteojos rojos/azules.`).then(() => this.resumeGame());
+		Swal.fire({ title: 'Bienvenido', text: 'Versión del Tetris para personas com ambliopía. Para usar con anteojos rojos/azules.', heightAuto: false }).then(
+			() => this.resumeGame()
+		);
 	};
 
 	/**
 	 * Initializes keyboard keys and screen buttons
+	 * Pauses game on window blur
 	 */
 	initControls = () => {
 		document.addEventListener('keydown', (e) => {
@@ -201,6 +204,9 @@ class Game {
 				this.askUserConfirmResetGame();
 			})
 		);
+
+		// Pauses game when window loses focus
+		window.addEventListener('blur', () => this.pauseGame());
 	};
 
 	/**
@@ -243,7 +249,7 @@ class Game {
 		// Downs figure till end
 		while (this.figureCanMoveDown()) {
 			this.globalY++;
-			this.score++;
+			this.scorePoints++;
 			this.refreshScore();
 		}
 		// Process positions
@@ -288,7 +294,6 @@ class Game {
 	 * Restarts mainLoop and sounds
 	 */
 	resumeGame = () => {
-		//this.sounds.background.play();
 		this.setMessage('3');
 		setTimeout(() => {
 			this.setMessage('2');
@@ -299,6 +304,7 @@ class Game {
 		setTimeout(() => {
 			this.hideMessage();
 			this.refreshScore();
+			this.sounds.background.play();
 			this.paused = false;
 			this.canPlay = true;
 			this.intervalId = setInterval(this.mainLoop.bind(this), Game.PIECE_SPEED);
@@ -367,8 +373,8 @@ class Game {
 	addScore = (rows: number[]) => {
 		// 1 line 40, 2 lines 100, 3 lines 30, 4 lines 1200
 		let score = [0, 40, 100, 300, 1200];
-		this.score += score[rows.length];
-		this.rows += rows.length;
+		this.scorePoints += score[rows.length];
+		this.scoreRows += rows.length;
 		this.refreshScore();
 	};
 
@@ -470,9 +476,11 @@ class Game {
 		this.sounds.tap.play();
 		this.moveFigurePointsToExistingPieces();
 		if (this.playerLoses()) {
-			Swal.fire('Juego terminado', 'Inténtalo de nuevo');
 			this.canPlay = false;
-			this.resetGame();
+			Swal.fire({ title: 'Juego terminado', text: 'Inténtalo de nuevo.', heightAuto: false }).then(() => {
+				this.resetGame();
+				this.resumeGame();
+			});
 			return;
 		}
 		this.verifyAndDeleteFullRows();
@@ -544,23 +552,23 @@ class Game {
 			const points = figure.getPoints();
 			let offsetX;
 			let offsetY;
-			if (points.find((p) => p.x === 3)) {
-				// Figure I needs half block to center verticaly
+			if (points.find((p) => p.x === 2)) {
+				// Figure I needs half block to center verticaly (the only one with a point at x=2)
 				offsetX = 0;
-				offsetY = 0.5;
-			} else if (points.find((p) => p.x === 2)) {
-				// The rest needs half block to center horizontaly
+				offsetY = -0.5;
+			} else if (points.find((p) => p.x === -1)) {
+				// The rest needs half block to center horizontaly (they have a point at x=-1)
 				offsetX = 0.5;
 				offsetY = 0;
 			} else {
-				// Figure O needs one block to center horizontaly
-				offsetX = 1;
+				// Figure O needs one block to center horizontaly and has no negative points
+				offsetX = 0;
 				offsetY = 0;
 			}
 			for (const point of points) {
 				let drawingPoint = { ...point };
-				drawingPoint.x += offsetX;
-				drawingPoint.y += offsetY;
+				drawingPoint.x += offsetX + 1; // +1 because tetrominos have negative positions to center rotation point
+				drawingPoint.y += offsetY + 1; // +1 because tetrominos have negative positions to center rotation point
 				this.drawPoint(canvas, drawingPoint);
 			}
 		};
@@ -629,10 +637,10 @@ class Game {
 	 */
 	refreshScore = () => {
 		if (this.$txtScore?.length) {
-			this.$txtScore.forEach((txt) => (txt.textContent = String(this.score)));
+			this.$txtScore.forEach((txt) => (txt.textContent = String(this.scorePoints)));
 		}
 		if (this.$txtRows?.length) {
-			this.$txtRows.forEach((txt) => (txt.textContent = String(this.rows)));
+			this.$txtRows.forEach((txt) => (txt.textContent = String(this.scoreRows)));
 		}
 	};
 
@@ -660,7 +668,7 @@ class Game {
 	 */
 	initSounds = () => {
 		this.sounds = {
-			background: Utils.loadSound('assets/New Donk City_ Daytime 8 Bit.mp3', true),
+			background: Utils.loadSound('assets/theme.mp3', true),
 			success: Utils.loadSound('assets/success.wav'),
 			denied: Utils.loadSound('assets/denied.wav'),
 			tap: Utils.loadSound('assets/tap.wav')
@@ -778,17 +786,20 @@ class Game {
 	 * @returns Tetromino
 	 */
 	chooseRandomFigure = () => {
+		//TODO probar cargando los puntos con valores negativos respecto del punto de giro, el 0,0
 		let randomFigure: Tetromino;
 		let randomOption = Utils.getRandomNumberInRange(1, 7);
 		switch (randomOption) {
 			case 1: // O (smashboy)
-				randomFigure = new Tetromino([[new Point(0, 0), new Point(1, 0), new Point(1, 1), new Point(0, 1)]], this.options);
+				randomFigure = new Tetromino([[new Point(0, -1), new Point(1, -1), new Point(1, 0), new Point(0, 0)]], this.options);
 				break;
 			case 2: // I (hero)
 				randomFigure = new Tetromino(
 					[
-						[new Point(0, 0), new Point(1, 0), new Point(2, 0), new Point(3, 0)],
-						[new Point(0, 0), new Point(0, 1), new Point(0, 2), new Point(0, 3)]
+						[new Point(-1, 0), new Point(0, 0), new Point(1, 0), new Point(2, 0)],
+						[new Point(0, -1), new Point(0, 0), new Point(0, 1), new Point(0, 2)],
+						[new Point(-1, 1), new Point(0, 1), new Point(1, 1), new Point(2, 1)],
+						[new Point(1, -1), new Point(1, 0), new Point(1, 1), new Point(1, 2)]
 					],
 
 					this.options
@@ -797,10 +808,10 @@ class Game {
 			case 3: // L (orange ricky)
 				randomFigure = new Tetromino(
 					[
-						[new Point(0, 1), new Point(1, 1), new Point(2, 1), new Point(2, 0)],
-						[new Point(0, 0), new Point(0, 1), new Point(0, 2), new Point(1, 2)],
-						[new Point(0, 1), new Point(0, 0), new Point(1, 0), new Point(2, 0)],
-						[new Point(0, 0), new Point(1, 0), new Point(1, 1), new Point(1, 2)]
+						[new Point(-1, 0), new Point(0, 0), new Point(1, 0), new Point(1, -1)],
+						[new Point(0, -1), new Point(0, 0), new Point(0, 1), new Point(1, 1)],
+						[new Point(-1, 1), new Point(-1, 0), new Point(0, 0), new Point(1, 0)],
+						[new Point(-1, -1), new Point(0, -1), new Point(0, 0), new Point(0, 1)]
 					],
 					this.options
 				);
@@ -808,10 +819,10 @@ class Game {
 			case 4: // J (blue ricky)
 				randomFigure = new Tetromino(
 					[
-						[new Point(0, 0), new Point(0, 1), new Point(1, 1), new Point(2, 1)],
-						[new Point(0, 0), new Point(1, 0), new Point(0, 1), new Point(0, 2)],
-						[new Point(0, 0), new Point(1, 0), new Point(2, 0), new Point(2, 1)],
-						[new Point(0, 2), new Point(1, 2), new Point(1, 1), new Point(1, 0)]
+						[new Point(-1, -1), new Point(-1, 0), new Point(0, 0), new Point(1, 0)],
+						[new Point(0, 1), new Point(0, 0), new Point(0, -1), new Point(1, -1)],
+						[new Point(-1, 0), new Point(0, 0), new Point(1, 0), new Point(1, 1)],
+						[new Point(-1, 1), new Point(0, 1), new Point(0, 0), new Point(0, -1)]
 					],
 					this.options
 				);
@@ -819,8 +830,10 @@ class Game {
 			case 5: // Z (Cleveland Z)
 				randomFigure = new Tetromino(
 					[
-						[new Point(0, 0), new Point(1, 0), new Point(1, 1), new Point(2, 1)],
-						[new Point(0, 1), new Point(1, 1), new Point(1, 0), new Point(0, 2)]
+						[new Point(-1, -1), new Point(0, -1), new Point(0, 0), new Point(1, 0)],
+						[new Point(0, 1), new Point(0, 0), new Point(1, 0), new Point(1, -1)],
+						[new Point(-1, 0), new Point(0, 0), new Point(0, 1), new Point(1, 1)],
+						[new Point(-1, 1), new Point(-1, 0), new Point(0, 0), new Point(0, -1)]
 					],
 					this.options
 				);
@@ -828,8 +841,10 @@ class Game {
 			case 6: // S (Rhode Island Z)
 				randomFigure = new Tetromino(
 					[
-						[new Point(0, 1), new Point(1, 1), new Point(1, 0), new Point(2, 0)],
-						[new Point(0, 0), new Point(0, 1), new Point(1, 1), new Point(1, 2)]
+						[new Point(-1, 0), new Point(0, 0), new Point(0, -1), new Point(1, -1)],
+						[new Point(0, -1), new Point(0, 0), new Point(1, 0), new Point(1, 1)],
+						[new Point(-1, 1), new Point(0, 1), new Point(0, 0), new Point(1, 0)],
+						[new Point(-1, -1), new Point(-1, 0), new Point(0, 0), new Point(0, 1)]
 					],
 					this.options
 				);
@@ -838,28 +853,28 @@ class Game {
 				randomFigure = new Tetromino(
 					[
 						[
-							new Point({ x: 0, y: 1, direction: 'vertical' }),
-							new Point({ x: 1, y: 1, direction: 'horizontal' }),
-							new Point({ x: 2, y: 1, direction: 'vertical' }),
-							new Point({ x: 1, y: 0, direction: 'vertical' })
-						],
-						[
+							new Point({ x: -1, y: 0, direction: 'vertical' }),
 							new Point({ x: 0, y: 0, direction: 'horizontal' }),
-							new Point({ x: 0, y: 1, direction: 'vertical' }),
-							new Point({ x: 0, y: 2, direction: 'horizontal' }),
-							new Point({ x: 1, y: 1, direction: 'horizontal' })
+							new Point({ x: 1, y: 0, direction: 'vertical' }),
+							new Point({ x: 0, y: -1, direction: 'vertical' })
 						],
 						[
+							new Point({ x: 0, y: -1, direction: 'horizontal' }),
 							new Point({ x: 0, y: 0, direction: 'vertical' }),
-							new Point({ x: 1, y: 0, direction: 'horizontal' }),
-							new Point({ x: 2, y: 0, direction: 'vertical' }),
-							new Point({ x: 1, y: 1, direction: 'vertical' })
+							new Point({ x: 0, y: 1, direction: 'horizontal' }),
+							new Point({ x: 1, y: 0, direction: 'horizontal' })
 						],
 						[
-							new Point({ x: 1, y: 0, direction: 'horizontal' }),
-							new Point({ x: 1, y: 1, direction: 'vertical' }),
-							new Point({ x: 1, y: 2, direction: 'horizontal' }),
-							new Point({ x: 0, y: 1, direction: 'horizontal' })
+							new Point({ x: -1, y: 0, direction: 'vertical' }),
+							new Point({ x: 0, y: 0, direction: 'horizontal' }),
+							new Point({ x: 1, y: 0, direction: 'vertical' }),
+							new Point({ x: 0, y: 1, direction: 'vertical' })
+						],
+						[
+							new Point({ x: 0, y: -1, direction: 'horizontal' }),
+							new Point({ x: 0, y: 0, direction: 'vertical' }),
+							new Point({ x: 0, y: 1, direction: 'horizontal' }),
+							new Point({ x: -1, y: 0, direction: 'horizontal' })
 						]
 					],
 					this.options
@@ -915,7 +930,8 @@ class Game {
 	 * @returns {boolean}
 	 */
 	absolutePointOutOfLimits = (absoluteX: number, absoluteY: number): boolean => {
-		return absoluteX < 0 || absoluteX > Game.COLUMNS - 1 || absoluteY < 0 || absoluteY > Game.ROWS - 1;
+		// absoluteY can be < 0 because starting figures are outside the bounds due to rotating point
+		return absoluteX < 0 || absoluteX > Game.COLUMNS - 1 || absoluteY < -1 || absoluteY > Game.ROWS - 1;
 	};
 
 	/**
@@ -979,8 +995,18 @@ class Game {
 		return true;
 	};
 
-	figureCanRotate = () => {
-		const newPointsAfterRotate = this.currentFigure.getNextRotation();
+	figureCanRotate = (offsetX = 0) => {
+		// Creates new array with next rotation point
+		let newPointsAfterRotate = [...this.currentFigure.getNextRotation()];
+		// Adds offset to new points
+		if (offsetX !== 0) {
+			newPointsAfterRotate = newPointsAfterRotate.map((point) => {
+				const newPoint = { ...point };
+				newPoint.x += offsetX;
+				return newPoint;
+			});
+		}
+		// Calculate if rotated figure crashes to existing point
 		for (const rotatedPoint of newPointsAfterRotate) {
 			if (!this.isValidPoint(rotatedPoint, this.currentFigure.getPoints())) {
 				return false;
@@ -990,13 +1016,25 @@ class Game {
 	};
 
 	rotateFigure = () => {
-		if (!this.figureCanRotate()) {
-			this.sounds.denied.currentTime = 0;
-			this.sounds.denied.play();
-			return;
+		// Checks if moving the piece to left or right and then rotating is possible
+		// (4 spaces y the maximum size of a piece)
+		// This solves the problem of a figure stucked to the walls
+		for (let offset = 0; offset <= 4; offset++) {
+			if (this.figureCanRotate(offset)) {
+				this.currentFigure.points = this.currentFigure.getNextRotation();
+				this.currentFigure.incrementRotationIndex();
+				this.globalX += offset;
+				return;
+			} else if (this.figureCanRotate(offset * -1)) {
+				this.currentFigure.points = this.currentFigure.getNextRotation();
+				this.currentFigure.incrementRotationIndex();
+				this.globalX -= offset;
+				return;
+			}
 		}
-		this.currentFigure.points = this.currentFigure.getNextRotation();
-		this.currentFigure.incrementRotationIndex();
+		this.sounds.denied.pause();
+		this.sounds.denied.currentTime = 0;
+		this.sounds.denied.play();
 	};
 
 	askUserConfirmResetGame = async () => {
@@ -1009,7 +1047,8 @@ class Game {
 			confirmButtonColor: '#fdbf9c',
 			cancelButtonColor: '#4A42F3',
 			cancelButtonText: 'No',
-			confirmButtonText: 'Sí'
+			confirmButtonText: 'Sí',
+			heightAuto: false
 		});
 		if (result.value) {
 			this.resetGame();
