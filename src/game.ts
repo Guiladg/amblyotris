@@ -28,9 +28,9 @@ class Game {
 	static CANVAS_WIDTH = Game.SQUARE_LENGTH * Game.COLUMNS;
 	static CANVAS_HEIGHT = Game.SQUARE_LENGTH * Game.ROWS;
 
-	static BACKGROUND_FILL = '#000000';
-	static BACKGROUND_STROKE = '#222222';
-	static BORDER_COLOR = 'transparent';
+	static BACKGROUND_FILL = '#FFFFFF';
+	static BACKGROUND_STROKE = '#F0F0F0';
+	static BORDER_COLOR = '#FFFFFF';
 	static DELETED_ROW_COLOR = ['#FF00FF', '#00FFFF', '#FF00FF', '#00FFFF', '#FF00FF', '#00FFFF', '#FF00FF', '#00FFFF'];
 
 	// When a piece collapses with something at its bottom, how many time wait for putting another piece? (in ms)
@@ -61,6 +61,7 @@ class Game {
 	intervalId: NodeJS.Timeout;
 	scorePoints: number;
 	scoreRows: number;
+	scoreLevel: number;
 
 	$btnDown: HTMLElement[];
 	$btnRight: HTMLElement[];
@@ -71,6 +72,7 @@ class Game {
 	$btnResume: HTMLElement[];
 	$txtScore: HTMLElement[];
 	$txtRows: HTMLElement[];
+	$txtLevel: HTMLElement[];
 	$btnReset: HTMLElement[];
 
 	$baseEl: HTMLElement;
@@ -117,6 +119,7 @@ class Game {
 	resetGame = () => {
 		this.scorePoints = 0;
 		this.scoreRows = 0;
+		this.scoreLevel = 1;
 		this.sounds.success.currentTime = 0;
 		this.sounds.success.pause();
 		this.sounds.background.currentTime = 0;
@@ -304,7 +307,7 @@ class Game {
 		setTimeout(() => {
 			this.hideMessage();
 			this.refreshScore();
-			this.sounds.background.play();
+			//this.sounds.background.play();
 			this.paused = false;
 			this.canPlay = true;
 			this.intervalId = setInterval(this.mainLoop.bind(this), Game.PIECE_SPEED);
@@ -581,7 +584,7 @@ class Game {
 	 * @param {CanvasRenderingContext2D} canvasContext
 	 * @param {BoardPoint | Point} point
 	 */
-	drawPoint = (canvasContext: CanvasRenderingContext2D, point: BoardPoint | Point, shade = true) => {
+	drawPoint = (canvasContext: CanvasRenderingContext2D, point: BoardPoint | Point, shade = false) => {
 		let x = point.x * Game.SQUARE_LENGTH;
 		let y = point.y * Game.SQUARE_LENGTH;
 
@@ -642,6 +645,9 @@ class Game {
 		if (this.$txtRows?.length) {
 			this.$txtRows.forEach((txt) => (txt.textContent = String(this.scoreRows)));
 		}
+		if (this.$txtLevel?.length) {
+			this.$txtLevel.forEach((txt) => (txt.textContent = String(this.scoreLevel)));
+		}
 	};
 
 	/**
@@ -650,7 +656,7 @@ class Game {
 	setMessage = (text: string, options?: { font?: string; fillStyle?: string }) => {
 		this.clearCanvas(this.canvasMessage);
 		this.canvasMessage.textAlign = 'center';
-		this.canvasMessage.fillStyle = options?.fillStyle ?? '#FFFFFF';
+		this.canvasMessage.fillStyle = options?.fillStyle ?? '#000000';
 		const font = options?.font ?? 'bold 50px Arial';
 		this.canvasMessage.font = font;
 		// Calculates veretical offset depending on font size (10 is for making it better)
@@ -681,6 +687,7 @@ class Game {
 	initDomElements = () => {
 		this.$txtScore = Array.from(this.$baseEl.getElementsByClassName('txtScore') as HTMLCollectionOf<HTMLElement>);
 		this.$txtRows = Array.from(this.$baseEl.getElementsByClassName('txtRows') as HTMLCollectionOf<HTMLElement>);
+		this.$txtLevel = Array.from(this.$baseEl.getElementsByClassName('txtLevel') as HTMLCollectionOf<HTMLElement>);
 		this.$btnPause = Array.from(this.$baseEl.getElementsByClassName('btnPause') as HTMLCollectionOf<HTMLElement>);
 		this.$btnResume = Array.from(this.$baseEl.getElementsByClassName('btnPlay') as HTMLCollectionOf<HTMLElement>);
 		this.$btnRotate = Array.from(this.$baseEl.getElementsByClassName('btnRotate') as HTMLCollectionOf<HTMLElement>);
@@ -778,7 +785,8 @@ class Game {
 	 */
 	restartGlobalXAndY = () => {
 		this.globalX = Math.floor(Game.COLUMNS / 2) - 1;
-		this.globalY = 0;
+		// Pieces start on -1 so they are not visible before starting to fall
+		this.globalY = -1;
 	};
 
 	/**
