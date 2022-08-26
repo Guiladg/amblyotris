@@ -19,7 +19,6 @@
         }
         #game {
             height: 100%;
-            width: 100%;
             display: inline-flex;
             flex-direction: column;
             justify-content: space-evenly;
@@ -85,13 +84,13 @@
             height: 100%;
         }
         .gameBoard {
-            position: absolute !important;
             top: 0;
             height: 100%;
             width: 100%;
         }
         .gameBoard canvas {
-            position: absolute;
+            height: 100%;
+            width: auto;
         }
         .controls {
             padding: 15px 0;
@@ -229,6 +228,7 @@
         .img1x2 {
             display: block;
             height: 100%;
+            width: auto;
         }
     </style>
     <title>Amblyotris</title>
@@ -243,7 +243,6 @@
         <div class="center">
             <div class="main">
                 <div class="main_inner">
-                    <img src="assets/1x2.gif" class="img1x2">
                     <div class="gameBoard"></div>
                 </div>
             </div>

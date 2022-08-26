@@ -717,6 +717,8 @@ class Game {
 		this.$cnvStack.setAttribute('width', Game.CANVAS_WIDTH + 'px');
 		this.$cnvStack.setAttribute('height', Game.CANVAS_HEIGHT + 'px');
 		this.$cnvStack.style.position = 'absolute';
+		this.$cnvStack.style.left = '0';
+		this.$cnvStack.style.top = '0';
 		this.$cnvStack.style.width = '100%';
 		this.$cnvStack.style.height = '100%';
 		this.$cnvStack.style.zIndex = '1';
@@ -724,6 +726,8 @@ class Game {
 		this.$cnvActive.setAttribute('width', Game.CANVAS_WIDTH + 'px');
 		this.$cnvActive.setAttribute('height', Game.CANVAS_HEIGHT + 'px');
 		this.$cnvActive.style.position = 'absolute';
+		this.$cnvActive.style.left = '0';
+		this.$cnvActive.style.top = '0';
 		this.$cnvActive.style.width = '100%';
 		this.$cnvActive.style.height = '100%';
 		this.$cnvActive.style.zIndex = '2';
@@ -731,6 +735,8 @@ class Game {
 		this.$cnvFront.setAttribute('width', Game.CANVAS_WIDTH + 'px');
 		this.$cnvFront.setAttribute('height', Game.CANVAS_HEIGHT + 'px');
 		this.$cnvFront.style.position = 'absolute';
+		this.$cnvFront.style.left = '0';
+		this.$cnvFront.style.top = '0';
 		this.$cnvFront.style.width = '100%';
 		this.$cnvFront.style.height = '100%';
 		this.$cnvFront.style.zIndex = '3';
@@ -771,6 +777,8 @@ class Game {
 		this.$cnvMessage.setAttribute('width', Game.CANVAS_WIDTH + 'px');
 		this.$cnvMessage.setAttribute('height', Game.CANVAS_HEIGHT + 'px');
 		this.$cnvMessage.style.position = 'absolute';
+		this.$cnvMessage.style.left = '0';
+		this.$cnvMessage.style.top = '0';
 		this.$cnvMessage.style.width = '100%';
 		this.$cnvMessage.style.height = '100%';
 		this.$cnvMessage.style.zIndex = '4';
