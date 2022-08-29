@@ -10,7 +10,7 @@
   "author": "Guilad Gonen",
   "license": "MIT",
   "dependencies": {
-    "sweetalert2": "^11.4.28"
+    "sweetalert": "^2.1.2"
   },
   "devDependencies": {
     "copy-webpack-plugin": "^11.0.0",

@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <link rel="stylesheet" href="css/bootstrap.min.css">
     <link rel="stylesheet" href="css/all.min.css">
+    <meta name="theme-color" content="#efcc19">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#efcc19">
     <style>
         html, body {
            height: 100%;
@@ -19,22 +21,23 @@
         }
         #game {
             height: 100%;
+            width: 100%;
             display: inline-flex;
             flex-direction: column;
             justify-content: space-evenly;
             align-items: center;
-            padding: 15px 15px 0 15px;
+            padding: 15px;
+            box-sizing: border-box;
         }
         .center {
             padding: 15px;
             background: black;
             display: flex;
             justify-content: center;
-            align-items: stretch;
-            width: 100%;
+            align-items: center;
             border: 4px solid;
             border-color: #987f0f #fae36c #fae36c #987f0f;
-            flex-grow: 1;
+            min-height: 1px;
         }
         .center .lateral {
             color: white;
@@ -47,6 +50,7 @@
         }
         .center .lateral canvas {
             max-width: 100%;
+            max-height: 80px;
         }
         .txtScore,
         .txtLevel,
@@ -71,34 +75,34 @@
         .proximasPiezas {
             display: flex;
             flex-direction: column;
-            gap: 20px;
         }
         .proximasPiezas canvas { display: block; }
         .main {
             border: 2px solid white;
             box-shadow: 0 0 20px #FFF8;
             padding: 2px;
+            height: 100%;
         }
         .main_inner {
             position: relative;
             height: 100%;
         }
         .gameBoard {
-            top: 0;
             height: 100%;
-            width: 100%;
         }
         .gameBoard canvas {
             height: 100%;
             width: auto;
+            display: block;
         }
         .controls {
-            padding: 15px 0;
+            padding-top: 15px;
             display: flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
             width: 100%;
+            margin-top: auto;
         }
         .controls .b {
             display: flex;
@@ -109,7 +113,7 @@
         .controls div {
             width: 100%;
             display: flex;
-            justify-content: center;
+            justify-content: flex-end;
             align-items: center;
         }
         .controls button {
@@ -152,17 +156,28 @@
         .controls button:active i::before {
             padding-top: 3px;
         }
-        .controls .l {
+        .controls .b > .l {
             flex-direction: column;
+            align-items: flex-start;
+            padding-left: 20px;
+            height: 100%;
+        }
+        .controls .b > .r {
+            height: 100%;
+            justify-content: flex-end;
+            padding-right: 25px;
         }
         .controls .l button {
             width: 90px;
             height: 90px;
+            line-height: 90px;
             border-radius: 50%;
+            margin: auto 0;
         }
         .controls .r button {
             width: 60px;
             height: 60px;
+            line-height: 60px;
             border-radius: 50%;
         }
         .controls .r div { 
@@ -187,21 +202,29 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            padding-bottom: 35px;
+            padding-bottom: 20px;
         }
         .controls .t button {
-            border-radius: 10px;
-            height: 20px;
+            border-radius: 100px;
+            height: 30px;
             width: 50px;
         }
         .controls .t button::before,
         .controls .t button::after {
-            border-radius: 5px;
+            border-radius: 100px;
+        }
+        .controls .t span {
+            font-size: 20px;
+            line-height: 1.2;
+        }
+        .controls i {
+            font-size: 24px;
         }
         .title {
             display: flex;
             padding: 0 0 10px 0;
             gap: 10px;
+            margin: auto;
         }
         .title div { 
             border: 2px solid;
@@ -230,11 +253,39 @@
             height: 100%;
             width: auto;
         }
+        .menu {
+            display: none;
+            padding: 0;
+        }
+        .menu li {
+            list-style: none;
+        }
+        .menu button {
+            display: block;
+            width: 100%;
+            height: 50px;
+            border: 0;
+            background: transparent;
+        }
+        #telon {
+            transition: all linear 500ms;
+            height: 100vh;
+            width: 100vw;
+            position: fixed;
+            z-index: 10000;
+            background: #efcc19;
+        }
     </style>
     <title>Amblyotris</title>
 </head>
 <body>
+    <div id="telon"></div>
     <div id="game">
+        <ul class="menu">
+            <li><button class="btnPlay">Continuar juego</button></li>
+            <li><button class="btnReset">Reiniciar juego</button></li>
+            <li><button class="btnFullScreen">Pantalla completa</button></li>
+        </ul>
         <div class="title">
             <div><img src="assets/kosak1.gif" alt=""></div>
             <h1><img src="assets/logo.png" alt="AMBLYOTЯIS"></h1>
@@ -265,17 +316,8 @@
                 <div class="l">
                     <div class="t">
                         <div>
-                            <button class="btnPlay"></button>
-                            <button class="btnPause" hidden></button>
-                            <span><i class="fas fa-play"></i> / <i class="fas fa-pause"></i></span>
-                        </div>
-                        <div>
-                            <button class="btnReset"></button>
-                            <span><i class="fas fa-power-off"></i></span>
-                        </div>
-                        <div>
-                            <button class="btnFullScreen"></button>
-                            <span><i class="fas fa-expand-alt"></i></span>
+                            <button class="btnMenu"></button>
+                            <span>MENÚ</span>
                         </div>
                     </div>
                     <button class="btnHardDrop"><i class="fas fa-angle-double-down"></i></button>
@@ -310,7 +352,30 @@
             isFullscreen ? document.cancelFullScreen() : element.requestFullScreen();
         }
         document.querySelector('.btnFullScreen').addEventListener("click", toggleFullscreen);
-        initAmblyotris(document.getElementById("game"), { variant: 'fullColor' });
+        initAmblyotris({
+            baseElement: document.getElementById("game"),
+            variant: 'veryHighContrast',
+            onInit: () => {
+                let $gameBoard = document.querySelector('.gameBoard');
+                let $game = document.querySelector('#game');
+                let $center = document.querySelector('.center');
+                let width = $gameBoard.offsetWidth;
+                let height = $gameBoard.offsetHeight;
+                let maxWidth = $game.clientWidth - 30;
+                while ( height >  width * 2) {
+                    height--;
+                    $gameBoard.style.height = height + 'px';
+                }
+                while ( $center.offsetWidth >  maxWidth) {
+                    height--;
+                    $gameBoard.style.height = height + 'px';
+                }
+                document.querySelector('#telon').style.opacity = 0;
+                setTimeout(() => {
+                    document.querySelector('#telon').style.display = 'none';
+                }, 500);
+            }
+        });
     </script>
 </body>
 </html>

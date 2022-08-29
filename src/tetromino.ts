@@ -1,11 +1,7 @@
-import Point from './point';
+import Point, { PointVariant } from './point';
 import Utils from './utils';
 
-interface TetrominoOptions {
-	variant: 'fullColor' | 'mixedColor' | 'highContrast' | 'veryHighContrast';
-}
-
-class Tetromino {
+export class Tetromino {
 	rotations: Point[][];
 	rotationIndex: number;
 	points: Point[];
@@ -13,9 +9,8 @@ class Tetromino {
 	/**
 	 * Creates a new Tetromino instance
 	 * @param rotations array of Point array with different ration options
-	 * @param options
 	 */
-	constructor(rotations: Point[][], options: TetrominoOptions) {
+	constructor(rotations: Point[][]) {
 		this.rotations = rotations;
 		this.rotationIndex = 0;
 		this.points = this.rotations[this.rotationIndex];
@@ -23,19 +18,11 @@ class Tetromino {
 		// Sets color and direction for each point if not already set
 		this.rotations.forEach((rotation) => {
 			rotation.forEach((point, i) => {
-				if (options.variant === 'highContrast') {
-					// 3 lines
-					point.color ??= [Utils.COLORS[1], Utils.COLORS[2], Utils.COLORS[3]];
+				point.color ??= randomColor;
+				point.variant ??= 'fullColor';
+				if (point.variant === 'veryHighContrast') {
 					// One block vertical, one block horizontal
 					point.direction ??= i % 2 === 0 ? 'vertical' : 'horizontal';
-				} else if (options.variant === 'veryHighContrast') {
-					// 5 lines
-					point.color ??= [Utils.COLORS[0], Utils.COLORS[1], Utils.COLORS[2], Utils.COLORS[3], Utils.COLORS[4]];
-					// One block vertical, one block horizontal
-					point.direction ??= i % 2 === 0 ? 'vertical' : 'horizontal';
-				} else {
-					// Same color figure
-					point.color ??= [randomColor];
 				}
 			});
 		});
@@ -73,4 +60,83 @@ class Tetromino {
 		return this.rotations[this.rotationIndex];
 	}
 }
-export default Tetromino;
+
+export function newTetrominoO(variant: PointVariant): Tetromino {
+	return new Tetromino([
+		[new Point({ x: 0, y: -1, variant }), new Point({ x: 1, y: -1, variant }), new Point({ x: 1, y: 0, variant }), new Point({ x: 0, y: 0, variant })]
+	]);
+}
+
+export function newTetrominoI(variant: PointVariant): Tetromino {
+	return new Tetromino([
+		[new Point({ x: -1, y: 0, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 1, y: 0, variant }), new Point({ x: 2, y: 0, variant })],
+		[new Point({ x: 0, y: -1, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 0, y: 1, variant }), new Point({ x: 0, y: 2, variant })],
+		[new Point({ x: -1, y: 1, variant }), new Point({ x: 0, y: 1, variant }), new Point({ x: 1, y: 1, variant }), new Point({ x: 2, y: 1, variant })],
+		[new Point({ x: 1, y: -1, variant }), new Point({ x: 1, y: 0, variant }), new Point({ x: 1, y: 1, variant }), new Point({ x: 1, y: 2, variant })]
+	]);
+}
+
+export function newTetrominoL(variant: PointVariant): Tetromino {
+	return new Tetromino([
+		[new Point({ x: -1, y: 0, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 1, y: 0, variant }), new Point({ x: 1, y: -1, variant })],
+		[new Point({ x: 0, y: -1, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 0, y: 1, variant }), new Point({ x: 1, y: 1, variant })],
+		[new Point({ x: -1, y: 1, variant }), new Point({ x: -1, y: 0, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 1, y: 0, variant })],
+		[new Point({ x: -1, y: -1, variant }), new Point({ x: 0, y: -1, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 0, y: 1, variant })]
+	]);
+}
+
+export function newTetrominoJ(variant: PointVariant): Tetromino {
+	return new Tetromino([
+		[new Point({ x: -1, y: -1, variant }), new Point({ x: -1, y: 0, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 1, y: 0, variant })],
+		[new Point({ x: 0, y: 1, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 0, y: -1, variant }), new Point({ x: 1, y: -1, variant })],
+		[new Point({ x: -1, y: 0, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 1, y: 0, variant }), new Point({ x: 1, y: 1, variant })],
+		[new Point({ x: -1, y: 1, variant }), new Point({ x: 0, y: 1, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 0, y: -1, variant })]
+	]);
+}
+
+export function newTetrominoZ(variant: PointVariant): Tetromino {
+	return new Tetromino([
+		[new Point({ x: -1, y: -1, variant }), new Point({ x: 0, y: -1, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 1, y: 0, variant })],
+		[new Point({ x: 0, y: 1, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 1, y: 0, variant }), new Point({ x: 1, y: -1, variant })],
+		[new Point({ x: -1, y: 0, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 0, y: 1, variant }), new Point({ x: 1, y: 1, variant })],
+		[new Point({ x: -1, y: 1, variant }), new Point({ x: -1, y: 0, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 0, y: -1, variant })]
+	]);
+}
+
+export function newTetrominoS(variant: PointVariant): Tetromino {
+	return new Tetromino([
+		[new Point({ x: -1, y: 0, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 0, y: -1, variant }), new Point({ x: 1, y: -1, variant })],
+		[new Point({ x: 0, y: -1, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 1, y: 0, variant }), new Point({ x: 1, y: 1, variant })],
+		[new Point({ x: -1, y: 1, variant }), new Point({ x: 0, y: 1, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 1, y: 0, variant })],
+		[new Point({ x: -1, y: -1, variant }), new Point({ x: -1, y: 0, variant }), new Point({ x: 0, y: 0, variant }), new Point({ x: 0, y: 1, variant })]
+	]);
+}
+
+export function newTetrominoT(variant: PointVariant): Tetromino {
+	return new Tetromino([
+		[
+			new Point({ x: -1, y: 0, variant, direction: 'vertical' }),
+			new Point({ x: 0, y: 0, variant, direction: 'horizontal' }),
+			new Point({ x: 1, y: 0, variant, direction: 'vertical' }),
+			new Point({ x: 0, y: -1, variant, direction: 'vertical' })
+		],
+		[
+			new Point({ x: 0, y: -1, variant, direction: 'horizontal' }),
+			new Point({ x: 0, y: 0, variant, direction: 'vertical' }),
+			new Point({ x: 0, y: 1, variant, direction: 'horizontal' }),
+			new Point({ x: 1, y: 0, variant, direction: 'horizontal' })
+		],
+		[
+			new Point({ x: -1, y: 0, variant, direction: 'vertical' }),
+			new Point({ x: 0, y: 0, variant, direction: 'horizontal' }),
+			new Point({ x: 1, y: 0, variant, direction: 'vertical' }),
+			new Point({ x: 0, y: 1, variant, direction: 'vertical' })
+		],
+		[
+			new Point({ x: 0, y: -1, variant, direction: 'horizontal' }),
+			new Point({ x: 0, y: 0, variant, direction: 'vertical' }),
+			new Point({ x: 0, y: 1, variant, direction: 'horizontal' }),
+			new Point({ x: -1, y: 0, variant, direction: 'horizontal' })
+		]
+	]);
+}

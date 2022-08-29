@@ -1,14 +1,26 @@
-import Point from './point';
-import Tetromino from './tetromino';
+import Point, { PointVariant } from './point';
+import { Tetromino, newTetrominoI, newTetrominoJ, newTetrominoL, newTetrominoO, newTetrominoS, newTetrominoT, newTetrominoZ } from './tetromino';
 import Utils from './utils';
-import Swal from 'sweetalert2';
+import Swal from 'sweetalert';
 
 interface BoardPoint extends Point {
 	taken: boolean;
 }
 
-export interface GameOptions {
-	variant: 'fullColor' | 'mixedColor' | 'highContrast' | 'highContrast';
+interface GameSettings {
+	background?: string;
+	variant?: PointVariant;
+	pieceSpeed?: number;
+	rows?: number;
+	cols?: number;
+	squareSize?: number;
+	width?: number;
+	height?: number;
+}
+
+export interface GameOptions extends GameSettings {
+	baseElement?: HTMLElement;
+	onInit?: () => void;
 }
 
 const requestAnimFrame = (function () {
@@ -21,26 +33,9 @@ const requestAnimFrame = (function () {
 })();
 
 class Game {
-	// Square length in pixels
-	static SQUARE_LENGTH = screen.width > 420 ? 30 : 20;
-	static COLUMNS = 10;
-	static ROWS = 20;
-	static CANVAS_WIDTH = Game.SQUARE_LENGTH * Game.COLUMNS;
-	static CANVAS_HEIGHT = Game.SQUARE_LENGTH * Game.ROWS;
-
-	static BACKGROUND_FILL = '#FFFFFF';
-	static BACKGROUND_STROKE = '#F0F0F0';
-	static BORDER_COLOR = '#FFFFFF';
-	static DELETED_ROW_COLOR = ['#FF00FF', '#00FFFF', '#FF00FF', '#00FFFF', '#FF00FF', '#00FFFF', '#FF00FF', '#00FFFF'];
-
-	// When a piece collapses with something at its bottom, how many time wait for putting another piece? (in ms)
-	static TIMEOUT_LOCK_PUT_NEXT_PIECE = 300;
-	// Speed of falling piece (in ms)
-	static PIECE_SPEED = 900;
-	// Animation time when a row is being deleted
-	static DELETE_ROW_ANIMATION = 500;
-
 	options: GameOptions;
+	settings: GameSettings;
+
 	flagTimeout: boolean;
 	flagHardDrop: boolean;
 	board: BoardPoint[][];
@@ -48,6 +43,7 @@ class Game {
 	globalX: number;
 	globalY: number;
 	paused: boolean;
+	starting: boolean;
 	currentFigure: Tetromino;
 	nextFigure: Tetromino;
 	subNextFigure: Tetromino;
@@ -74,6 +70,8 @@ class Game {
 	$txtRows: HTMLElement[];
 	$txtLevel: HTMLElement[];
 	$btnReset: HTMLElement[];
+	$btnMenu: HTMLElement[];
+	$divMenu: HTMLElement;
 
 	$baseEl: HTMLElement;
 	$gameBoard: HTMLElement;
@@ -95,10 +93,33 @@ class Game {
 	canvasMessage: CanvasRenderingContext2D;
 	$msg: HTMLElement;
 
-	constructor(baseEl: any, options?: GameOptions) {
-		let defaults: GameOptions = { variant: 'fullColor' };
+	constructor(options?: GameOptions);
+	constructor(baseEl: HTMLElement, options?: GameOptions);
+	constructor(baseElOrOptions: any, options?: GameOptions) {
+		const squareSize = Math.round(screen.width / 10);
+		const cols = 10;
+		const rows = 20;
+		let defaults: GameOptions = {
+			variant: 'fullColor',
+			background: '#FFFFFF',
+			pieceSpeed: 900,
+			cols,
+			rows,
+			squareSize,
+			width: squareSize * cols,
+			height: squareSize * rows
+		};
+		let baseEl: HTMLElement;
+		let opts: GameOptions;
+		if (baseElOrOptions?.baseElement) {
+			baseEl = baseElOrOptions.baseElement;
+			opts = baseElOrOptions;
+		} else {
+			baseEl = baseElOrOptions;
+			opts = options;
+		}
 		this.$baseEl = baseEl;
-		this.options = { ...defaults, ...options };
+		this.options = { ...defaults, ...opts };
 		this.init();
 	}
 
@@ -111,6 +132,9 @@ class Game {
 		this.initSounds();
 		this.resetGame();
 		this.initControls();
+		if (this.options.onInit) {
+			this.options.onInit();
+		}
 	};
 
 	/**
@@ -138,8 +162,8 @@ class Game {
 	 * Shows welcome message
 	 */
 	showWelcome = () => {
-		Swal.fire({ title: 'Bienvenido', text: 'Versión del Tetris para personas com ambliopía. Para usar con anteojos rojos/azules.', heightAuto: false }).then(
-			() => this.resumeGame()
+		Swal({ title: 'Bienvenido', text: 'Versión del Tetris para personas com ambliopía. Para usar con anteojos rojos/azules.', closeOnEsc: true }).then(() =>
+			this.resumeGame()
 		);
 	};
 
@@ -207,9 +231,21 @@ class Game {
 				this.askUserConfirmResetGame();
 			})
 		);
+		this.$btnMenu.forEach((btn) =>
+			btn.addEventListener('click', () => {
+				this.showMenu();
+			})
+		);
+
+		// Every button inside the menu closes it
+		Array.from(this.$divMenu.getElementsByTagName('button')).forEach((btn) =>
+			btn.addEventListener('click', () => {
+				Swal.close();
+			})
+		);
 
 		// Pauses game when window loses focus
-		window.addEventListener('blur', () => this.pauseGame());
+		window.addEventListener('blur', () => (this.$btnMenu.length ? this.showMenu() : this.pauseGame()));
 	};
 
 	/**
@@ -273,12 +309,8 @@ class Game {
 	pauseOrResumeGame = () => {
 		if (this.paused) {
 			this.resumeGame();
-			this.$btnResume.forEach((btn) => (btn.hidden = true));
-			this.$btnPause.forEach((btn) => (btn.hidden = false));
 		} else {
 			this.pauseGame();
-			this.$btnResume.forEach((btn) => (btn.hidden = false));
-			this.$btnPause.forEach((btn) => (btn.hidden = true));
 		}
 	};
 
@@ -286,34 +318,56 @@ class Game {
 	 * Pauses mainLoop and sounds
 	 */
 	pauseGame = () => {
-		this.sounds.background.pause();
 		this.paused = true;
+		this.starting = false;
+		// Pauses music
+		this.sounds.background.pause();
+		// Stop falling pieces
 		this.canPlay = false;
 		clearInterval(this.intervalId);
 		this.setMessage('▐ ▌', { font: 'bold 30px Arial' });
+		// Hides pause buttons and shows play buttons
+		this.$btnResume.forEach((btn) => (btn.hidden = false));
+		this.$btnPause.forEach((btn) => (btn.hidden = true));
 	};
 
 	/**
 	 * Restarts mainLoop and sounds
 	 */
 	resumeGame = () => {
+		if (!this.paused || this.starting) return;
+
+		this.paused = false;
+		this.starting = true;
+
+		// Makes 3-2-1 and start
 		this.setMessage('3');
 		setTimeout(() => {
+			if (!this.starting) return;
 			this.setMessage('2');
+			setTimeout(() => {
+				if (!this.starting) return;
+				this.setMessage('1');
+				setTimeout(() => {
+					if (!this.starting) return;
+					this.starting = false;
+					this.hideMessage();
+					// Plays music
+					this.sounds.background.play();
+					// Start falling pieces
+					this.canPlay = true;
+					this.intervalId = setInterval(this.mainLoop.bind(this), this.options.pieceSpeed);
+					// Hides play buttons and shows pause buttons
+					this.$btnResume.forEach((btn) => (btn.hidden = true));
+					this.$btnPause.forEach((btn) => (btn.hidden = false));
+				}, 350);
+			}, 350);
 		}, 350);
-		setTimeout(() => {
-			this.setMessage('1');
-		}, 700);
-		setTimeout(() => {
-			this.hideMessage();
-			this.refreshScore();
-			//this.sounds.background.play();
-			this.paused = false;
-			this.canPlay = true;
-			this.intervalId = setInterval(this.mainLoop.bind(this), Game.PIECE_SPEED);
-		}, 1050);
 	};
 
+	/**
+	 * Moves the current figure points to the existing stack
+	 */
 	moveFigurePointsToExistingPieces = () => {
 		this.canPlay = false;
 		for (const point of this.currentFigure.getPoints()) {
@@ -329,6 +383,10 @@ class Game {
 		this.drawStack();
 	};
 
+	/**
+	 * Returns true if player has lost the game
+	 * @returns {boolean}
+	 */
 	playerLoses = (): boolean => {
 		// Check if there's something at Y 1. Maybe it is not fair for the player, but it works
 		for (const point of this.existingPieces[1]) {
@@ -339,40 +397,10 @@ class Game {
 		return false;
 	};
 
-	getPointsToDelete = (): number[] => {
-		const deletableRows: number[] = [];
-		this.existingPieces.forEach((row, y) => {
-			// If every point in row is taken, push row number
-			if (row.every((point) => point.taken)) {
-				deletableRows.push(y);
-			}
-		});
-		console.log('~ points', deletableRows);
-		return deletableRows;
-	};
-
-	changeDeletedRowColor = (deletableRows: number[]) => {
-		const wait = Game.DELETE_ROW_ANIMATION / 5;
-		const drawDeletedRows = () => {
-			this.clearCanvas(this.canvasFront);
-			for (const y of deletableRows) {
-				for (let x = 0; x < Game.COLUMNS; x++) {
-					let drawingPoint: Point = {
-						color: Game.DELETED_ROW_COLOR,
-						x: x,
-						y: y
-					};
-					this.drawPoint(this.canvasFront, drawingPoint, false);
-				}
-			}
-		};
-		setTimeout(() => this.clearCanvas(this.canvasFront), wait * 1);
-		setTimeout(drawDeletedRows, wait * 2);
-		setTimeout(() => this.clearCanvas(this.canvasFront), wait * 3);
-		setTimeout(drawDeletedRows, wait * 4);
-		setTimeout(() => this.clearCanvas(this.canvasFront), wait * 5);
-	};
-
+	/**
+	 * Adds the number of deleted rows to the score and the corresponding points
+	 * @param {number} rows rows recently deleted
+	 */
 	addScore = (rows: number[]) => {
 		// 1 line 40, 2 lines 100, 3 lines 30, 4 lines 1200
 		let score = [0, 40, 100, 300, 1200];
@@ -382,20 +410,33 @@ class Game {
 	};
 
 	/**
-	 * Returns an empty row
-	 * @param y
-	 * @returns
+	 * Paints deletable rows
+	 * @param {number[]} deletableRows rows to delete
 	 */
-	emptyRow = (y: number): BoardPoint[] => {
-		let row: BoardPoint[] = [];
-		for (let x = 0; x < Game.COLUMNS; x++) {
-			row.push({
-				taken: false,
-				x,
-				y
-			});
-		}
-		return row;
+	changeDeletedRowColor = (deletableRows: number[]) => {
+		// This Fn  draws a line for each color set in array
+		// over each deleted row
+		const drawDeletedRows = () => {
+			const colors = ['#FF00FF', '#888888', '#FF00FF', '#888888', '#FF00FF', '#888888', '#FF00FF', '#888888'];
+			this.clearCanvas(this.canvasFront);
+			for (const lineY of deletableRows) {
+				let y = lineY * this.options.squareSize;
+				let colorItem = 0;
+				let barLength = this.options.squareSize / colors.length;
+				for (const color of colors) {
+					this.canvasFront.fillStyle = color;
+					this.canvasFront.fillRect(0, y + barLength * colorItem, this.options.squareSize * this.options.cols, this.options.squareSize / colors.length);
+					colorItem++;
+				}
+			}
+		};
+		// Blink effect
+		drawDeletedRows();
+		setTimeout(() => this.clearCanvas(this.canvasFront), 100);
+		setTimeout(drawDeletedRows, 200);
+		setTimeout(() => this.clearCanvas(this.canvasFront), 300);
+		setTimeout(drawDeletedRows, 400);
+		setTimeout(() => this.clearCanvas(this.canvasFront), 500);
 	};
 
 	/**
@@ -403,6 +444,18 @@ class Game {
 	 * @param {number[]} deletableRows
 	 */
 	removeRowsFromExistingPieces = (deletableRows: number[]) => {
+		// This Fn returns a full empty row to add at top
+		const emptyRow = (y: number): BoardPoint[] => {
+			let row: BoardPoint[] = [];
+			for (let x = 0; x < this.options.cols; x++) {
+				row.push({
+					taken: false,
+					x,
+					y
+				});
+			}
+			return row;
+		};
 		// Iterate through the deleted rows
 		for (let yCoordinate of deletableRows) {
 			// Iterate through every row in existing pieces matrix,
@@ -415,34 +468,45 @@ class Game {
 					this.existingPieces[y].forEach((row, x) => (this.existingPieces[y][x].y = y));
 				} else {
 					// Add an empty row to the top
-					this.existingPieces[y] = this.emptyRow(y);
+					this.existingPieces[y] = emptyRow(y);
 				}
 			}
 		}
 	};
 
+	/**
+	 * Calculates if there are rows that must be deleted and then does it
+	 */
 	verifyAndDeleteFullRows = () => {
 		// Check deletable rows
-		const deletableRows = this.getPointsToDelete();
-		if (!deletableRows.length) return;
+		const deletableRows: number[] = [];
+		this.existingPieces.forEach((row, y) => {
+			// If every point in row is taken, push row number
+			if (row.every((point) => point.taken)) {
+				deletableRows.push(y);
+			}
+		});
 
-		// Stop and play sound
-		this.addScore(deletableRows);
-		this.sounds.success.pause();
-		this.sounds.success.currentTime = 0;
-		this.sounds.success.play();
-		// Stop falling process
-		this.canPlay = false;
-		// Paint deletable rows
-		this.changeDeletedRowColor(deletableRows);
-		// Wait for the deletion animation
-		setTimeout(() => {
-			// Remove rows
-			this.removeRowsFromExistingPieces(deletableRows);
-			this.drawStack();
-			// Restart falling process
-			this.canPlay = true;
-		}, Game.DELETE_ROW_ANIMATION);
+		if (deletableRows.length) {
+			// Adds score
+			this.addScore(deletableRows);
+			// Stop and play sound
+			this.sounds.success.pause();
+			this.sounds.success.currentTime = 0;
+			this.sounds.success.play();
+			// Stop falling process
+			this.canPlay = false;
+			// Paint deletable rows
+			this.changeDeletedRowColor(deletableRows);
+			// Wait for the deletion animation
+			setTimeout(() => {
+				// Remove rows
+				this.removeRowsFromExistingPieces(deletableRows);
+				this.drawStack();
+				// Restart falling process
+				this.canPlay = true;
+			}, 500);
+		}
 	};
 
 	mainLoop = () => {
@@ -471,7 +535,7 @@ class Game {
 				// At this point, we know that the figure collapsed either with the floor
 				// or with another point. So we move all the figure to the existing pieces array
 				this.endFallingProcess();
-			}, Game.TIMEOUT_LOCK_PUT_NEXT_PIECE);
+			}, this.options.pieceSpeed / 3);
 		}
 	};
 
@@ -480,7 +544,7 @@ class Game {
 		this.moveFigurePointsToExistingPieces();
 		if (this.playerLoses()) {
 			this.canPlay = false;
-			Swal.fire({ title: 'Juego terminado', text: 'Inténtalo de nuevo.', heightAuto: false }).then(() => {
+			Swal({ title: 'Juego terminado', text: 'Inténtalo de nuevo.' }).then(() => {
 				this.resetGame();
 				this.resumeGame();
 			});
@@ -496,7 +560,7 @@ class Game {
 	 * @param canvasContext
 	 */
 	clearCanvas = (canvasContext: CanvasRenderingContext2D) => {
-		canvasContext.clearRect(0, 0, Game.CANVAS_WIDTH, Game.CANVAS_HEIGHT);
+		canvasContext.clearRect(0, 0, this.options.width, this.options.height);
 	};
 
 	/**
@@ -504,12 +568,14 @@ class Game {
 	 */
 	drawBack = () => {
 		this.clearCanvas(this.canvasBack);
-		this.canvasBack.fillStyle = Game.BACKGROUND_FILL;
-		this.canvasBack.strokeStyle = Game.BACKGROUND_STROKE;
-		for (let y = 0; y < Game.ROWS; y++) {
-			for (let x = 0; x < Game.COLUMNS; x++) {
-				this.canvasBack.fillRect(x * Game.SQUARE_LENGTH, y * Game.SQUARE_LENGTH, Game.SQUARE_LENGTH, Game.SQUARE_LENGTH);
-				this.canvasBack.strokeRect(x * Game.SQUARE_LENGTH, y * Game.SQUARE_LENGTH, Game.SQUARE_LENGTH, Game.SQUARE_LENGTH);
+		this.canvasBack.fillStyle = this.options.background;
+		this.canvasBack.fill();
+		this.canvasBack.strokeStyle = '#00000008';
+		this.canvasBack.lineWidth = this.options.squareSize / 30;
+		for (let y = 0; y < this.options.rows; y++) {
+			for (let x = 0; x < this.options.cols; x++) {
+				this.canvasBack.fillRect(x * this.options.squareSize, y * this.options.squareSize, this.options.squareSize, this.options.squareSize);
+				this.canvasBack.strokeRect(x * this.options.squareSize, y * this.options.squareSize, this.options.squareSize, this.options.squareSize);
 			}
 		}
 	};
@@ -553,20 +619,20 @@ class Game {
 			if (!figure) return;
 			this.clearCanvas(canvas);
 			const points = figure.getPoints();
-			let offsetX;
-			let offsetY;
-			if (points.find((p) => p.x === 2)) {
+			let offsetX = 0.5; // Half block padding left
+			let offsetY = 0.5; // Half block padding top
+			if (points.find((p: Point) => p.x === 2)) {
 				// Figure I needs half block to center verticaly (the only one with a point at x=2)
-				offsetX = 0;
-				offsetY = -0.5;
-			} else if (points.find((p) => p.x === -1)) {
+				offsetX += 0;
+				offsetY += -0.5;
+			} else if (points.find((p: Point) => p.x === -1)) {
 				// The rest needs half block to center horizontaly (they have a point at x=-1)
-				offsetX = 0.5;
-				offsetY = 0;
+				offsetX += 0.5;
+				offsetY += 0;
 			} else {
 				// Figure O needs one block to center horizontaly and has no negative points
-				offsetX = 0;
-				offsetY = 0;
+				offsetX += 0;
+				offsetY += 0;
 			}
 			for (const point of points) {
 				let drawingPoint = { ...point };
@@ -584,55 +650,36 @@ class Game {
 	 * @param {CanvasRenderingContext2D} canvasContext
 	 * @param {BoardPoint | Point} point
 	 */
-	drawPoint = (canvasContext: CanvasRenderingContext2D, point: BoardPoint | Point, shade = false) => {
-		let x = point.x * Game.SQUARE_LENGTH;
-		let y = point.y * Game.SQUARE_LENGTH;
+	drawPoint = (canvasContext: CanvasRenderingContext2D, point: BoardPoint | Point) => {
+		// Border between points
+		const gap = this.options.squareSize / 30;
 
-		// Background
+		// Size of a square minus borders
+		let s = this.options.squareSize - gap * 2;
+
+		// Absolute positions
+		let x = point.x * this.options.squareSize + gap;
+		let y = point.y * this.options.squareSize + gap;
+
+		// Fill
 		let colorItem = 0;
-		let barLength = Game.SQUARE_LENGTH / point.color.length;
-		for (const color of point.color) {
-			canvasContext.fillStyle = color;
+		canvasContext.fillStyle = point.color;
+		canvasContext.fillRect(x, y, s, s);
+
+		// Variants
+		const borderWidth = s / 5;
+		if (point.variant !== 'fullColor') {
+			// Clears inside
+			canvasContext.clearRect(x + borderWidth, y + borderWidth, s - borderWidth * 2, s - borderWidth * 2);
+		}
+		if (point.variant === 'veryHighContrast') {
 			if (point.direction === 'vertical') {
-				canvasContext.fillRect(x + barLength * colorItem, y, Game.SQUARE_LENGTH / point.color.length, Game.SQUARE_LENGTH);
+				canvasContext.fillRect(x + borderWidth * 2, y, borderWidth, s);
 			} else {
-				canvasContext.fillRect(x, y + barLength * colorItem, Game.SQUARE_LENGTH, Game.SQUARE_LENGTH / point.color.length);
+				canvasContext.fillRect(x, y + borderWidth * 2, s, borderWidth);
 			}
 			colorItem++;
 		}
-		if (shade) {
-			// Shade top
-			canvasContext.fillStyle = '#FFFFFF44';
-			canvasContext.beginPath();
-			canvasContext.moveTo(x, y);
-			canvasContext.lineTo(x + Game.SQUARE_LENGTH, y);
-			canvasContext.lineTo(x + Game.SQUARE_LENGTH / 2, y + Game.SQUARE_LENGTH / 2);
-			canvasContext.fill();
-			// Shade right
-			canvasContext.fillStyle = '#00000022';
-			canvasContext.beginPath();
-			canvasContext.moveTo(x + Game.SQUARE_LENGTH, y);
-			canvasContext.lineTo(x + Game.SQUARE_LENGTH, y + Game.SQUARE_LENGTH);
-			canvasContext.lineTo(x + Game.SQUARE_LENGTH / 2, y + Game.SQUARE_LENGTH / 2);
-			canvasContext.fill();
-			// Shade bottom
-			canvasContext.fillStyle = '#00000044';
-			canvasContext.beginPath();
-			canvasContext.moveTo(x, y + Game.SQUARE_LENGTH);
-			canvasContext.lineTo(x + Game.SQUARE_LENGTH, y + Game.SQUARE_LENGTH);
-			canvasContext.lineTo(x + Game.SQUARE_LENGTH / 2, y + Game.SQUARE_LENGTH / 2);
-			canvasContext.fill();
-			// Shade left
-			canvasContext.fillStyle = '#FFFFFF22';
-			canvasContext.beginPath();
-			canvasContext.moveTo(x, y);
-			canvasContext.lineTo(x + Game.SQUARE_LENGTH, y);
-			canvasContext.lineTo(x + Game.SQUARE_LENGTH / 2, y + Game.SQUARE_LENGTH / 2);
-			canvasContext.fill();
-		}
-		// Border
-		canvasContext.strokeStyle = Game.BORDER_COLOR;
-		canvasContext.strokeRect(x, y, Game.SQUARE_LENGTH, Game.SQUARE_LENGTH);
 	};
 
 	/**
@@ -661,7 +708,7 @@ class Game {
 		this.canvasMessage.font = font;
 		// Calculates veretical offset depending on font size (10 is for making it better)
 		const offsetY = Number(font.match(/\d+/)?.[0] ?? 0) / 2 - 10;
-		this.canvasMessage.fillText(text, Game.CANVAS_WIDTH / 2, Game.CANVAS_HEIGHT / 2 + offsetY);
+		this.canvasMessage.fillText(text, this.options.width / 2, this.options.height / 2 + offsetY);
 		this.$cnvMessage.style.opacity = '1';
 	};
 	hideMessage = () => {
@@ -696,51 +743,46 @@ class Game {
 		this.$btnRight = Array.from(this.$baseEl.getElementsByClassName('btnRight') as HTMLCollectionOf<HTMLElement>);
 		this.$btnLeft = Array.from(this.$baseEl.getElementsByClassName('btnLeft') as HTMLCollectionOf<HTMLElement>);
 		this.$btnReset = Array.from(this.$baseEl.getElementsByClassName('btnReset') as HTMLCollectionOf<HTMLElement>);
+		this.$btnMenu = Array.from(this.$baseEl.getElementsByClassName('btnMenu') as HTMLCollectionOf<HTMLElement>);
+		this.$divMenu = this.$baseEl.querySelector('.menu');
 
 		// Creates canvases for board and current element falling
-		const gameBoard = this.$baseEl.getElementsByClassName('gameBoard');
-
-		if (!gameBoard.length) {
+		this.$gameBoard = this.$baseEl.querySelector('.gameBoard');
+		if (!this.$gameBoard) {
 			console.error('An element with lcass gameBoard is mandatory to initialize.');
 			return;
 		}
-		this.$gameBoard = gameBoard[0] as HTMLElement;
 		this.$gameBoard.style.position = 'relative';
 
 		this.$cnvBack = document.createElement('canvas');
-		this.$cnvBack.setAttribute('width', Game.CANVAS_WIDTH + 'px');
-		this.$cnvBack.setAttribute('height', Game.CANVAS_HEIGHT + 'px');
-		this.$cnvBack.style.width = '100%';
-		this.$cnvBack.style.height = '100%';
+		this.$cnvBack.setAttribute('width', this.options.width + 'px');
+		this.$cnvBack.setAttribute('height', this.options.height + 'px');
 		this.$cnvBack.style.zIndex = '0';
 		this.$cnvStack = document.createElement('canvas');
-		this.$cnvStack.setAttribute('width', Game.CANVAS_WIDTH + 'px');
-		this.$cnvStack.setAttribute('height', Game.CANVAS_HEIGHT + 'px');
+		this.$cnvStack.setAttribute('width', this.options.width + 'px');
+		this.$cnvStack.setAttribute('height', this.options.height + 'px');
 		this.$cnvStack.style.position = 'absolute';
-		this.$cnvStack.style.left = '0';
-		this.$cnvStack.style.top = '0';
-		this.$cnvStack.style.width = '100%';
-		this.$cnvStack.style.height = '100%';
 		this.$cnvStack.style.zIndex = '1';
 		this.$cnvActive = document.createElement('canvas');
-		this.$cnvActive.setAttribute('width', Game.CANVAS_WIDTH + 'px');
-		this.$cnvActive.setAttribute('height', Game.CANVAS_HEIGHT + 'px');
+		this.$cnvActive.setAttribute('width', this.options.width + 'px');
+		this.$cnvActive.setAttribute('height', this.options.height + 'px');
 		this.$cnvActive.style.position = 'absolute';
-		this.$cnvActive.style.left = '0';
-		this.$cnvActive.style.top = '0';
-		this.$cnvActive.style.width = '100%';
-		this.$cnvActive.style.height = '100%';
 		this.$cnvActive.style.zIndex = '2';
 		this.$cnvFront = document.createElement('canvas');
-		this.$cnvFront.setAttribute('width', Game.CANVAS_WIDTH + 'px');
-		this.$cnvFront.setAttribute('height', Game.CANVAS_HEIGHT + 'px');
+		this.$cnvFront.setAttribute('width', this.options.width + 'px');
+		this.$cnvFront.setAttribute('height', this.options.height + 'px');
 		this.$cnvFront.style.position = 'absolute';
-		this.$cnvFront.style.left = '0';
-		this.$cnvFront.style.top = '0';
-		this.$cnvFront.style.width = '100%';
-		this.$cnvFront.style.height = '100%';
 		this.$cnvFront.style.zIndex = '3';
+		this.$cnvMessage = document.createElement('canvas');
+		this.$cnvMessage.setAttribute('width', this.options.width + 'px');
+		this.$cnvMessage.setAttribute('height', this.options.height + 'px');
+		this.$cnvMessage.style.position = 'absolute';
+		this.$cnvMessage.style.zIndex = '4';
+		this.$cnvMessage.style.opacity = '0';
+		this.$cnvMessage.style.transition = 'opacity 0.3s ease';
+		this.canvasMessage = this.$cnvMessage.getContext('2d');
 
+		this.$gameBoard.appendChild(this.$cnvMessage);
 		this.$gameBoard.appendChild(this.$cnvStack);
 		this.$gameBoard.appendChild(this.$cnvActive);
 		this.$gameBoard.appendChild(this.$cnvFront);
@@ -753,8 +795,9 @@ class Game {
 
 		// Creates canvas for next figure
 		this.$cnvNext = document.createElement('canvas');
-		this.$cnvNext.setAttribute('width', Game.SQUARE_LENGTH * 4 + 'px');
-		this.$cnvNext.setAttribute('height', Game.SQUARE_LENGTH * 2 + 'px');
+		this.$cnvNext.setAttribute('width', this.options.squareSize * 5 + 'px'); // One block padding + 4 blocks Width
+		this.$cnvNext.setAttribute('height', this.options.squareSize * 3 + 'px'); // One block padding + 2 blocks height
+		this.$cnvNext.style.background = this.options.background;
 		this.canvasNext = this.$cnvNext.getContext('2d');
 		const nextFigure = this.$baseEl.getElementsByClassName('nextFigure');
 		if (nextFigure.length) {
@@ -763,36 +806,22 @@ class Game {
 		}
 		// Creates canvas for sub next figure
 		this.$cnvSubNext = document.createElement('canvas');
-		this.$cnvSubNext.setAttribute('width', Game.SQUARE_LENGTH * 4 + 'px');
-		this.$cnvSubNext.setAttribute('height', Game.SQUARE_LENGTH * 2 + 'px');
+		this.$cnvSubNext.setAttribute('width', this.options.squareSize * 5 + 'px'); // One block padding + 4 blocks Width
+		this.$cnvSubNext.setAttribute('height', this.options.squareSize * 3 + 'px'); // One block padding + 2 blocks height
+		this.$cnvSubNext.style.background = this.options.background;
 		this.canvasSubNext = this.$cnvSubNext.getContext('2d');
 		const subNextFigure = this.$baseEl.getElementsByClassName('subNextFigure');
 		if (subNextFigure.length) {
 			this.$subNextFigure = subNextFigure[0] as HTMLElement;
 			this.$subNextFigure.appendChild(this.$cnvSubNext);
 		}
-
-		// Crates canvas for messages over canvases
-		this.$cnvMessage = document.createElement('canvas');
-		this.$cnvMessage.setAttribute('width', Game.CANVAS_WIDTH + 'px');
-		this.$cnvMessage.setAttribute('height', Game.CANVAS_HEIGHT + 'px');
-		this.$cnvMessage.style.position = 'absolute';
-		this.$cnvMessage.style.left = '0';
-		this.$cnvMessage.style.top = '0';
-		this.$cnvMessage.style.width = '100%';
-		this.$cnvMessage.style.height = '100%';
-		this.$cnvMessage.style.zIndex = '4';
-		this.$cnvMessage.style.opacity = '0';
-		this.$cnvMessage.style.transition = 'opacity 0.3s ease';
-		this.$gameBoard.appendChild(this.$cnvMessage);
-		this.canvasMessage = this.$cnvMessage.getContext('2d');
 	};
 
 	/**
 	 * Resets cursor position to top middle
 	 */
 	restartGlobalXAndY = () => {
-		this.globalX = Math.floor(Game.COLUMNS / 2) - 1;
+		this.globalX = Math.floor(this.options.cols / 2) - 1;
 		// Pieces start on -1 so they are not visible before starting to fall
 		this.globalY = -1;
 	};
@@ -802,102 +831,33 @@ class Game {
 	 * @returns Tetromino
 	 */
 	chooseRandomFigure = () => {
-		//TODO probar cargando los puntos con valores negativos respecto del punto de giro, el 0,0
 		let randomFigure: Tetromino;
 		let randomOption = Utils.getRandomNumberInRange(1, 7);
+		const variant = this.options.variant;
 		switch (randomOption) {
 			case 1: // O (smashboy)
-				randomFigure = new Tetromino([[new Point(0, -1), new Point(1, -1), new Point(1, 0), new Point(0, 0)]], this.options);
+				randomFigure = newTetrominoO(variant);
 				break;
 			case 2: // I (hero)
-				randomFigure = new Tetromino(
-					[
-						[new Point(-1, 0), new Point(0, 0), new Point(1, 0), new Point(2, 0)],
-						[new Point(0, -1), new Point(0, 0), new Point(0, 1), new Point(0, 2)],
-						[new Point(-1, 1), new Point(0, 1), new Point(1, 1), new Point(2, 1)],
-						[new Point(1, -1), new Point(1, 0), new Point(1, 1), new Point(1, 2)]
-					],
-
-					this.options
-				);
+				randomFigure = newTetrominoI(variant);
 				break;
 			case 3: // L (orange ricky)
-				randomFigure = new Tetromino(
-					[
-						[new Point(-1, 0), new Point(0, 0), new Point(1, 0), new Point(1, -1)],
-						[new Point(0, -1), new Point(0, 0), new Point(0, 1), new Point(1, 1)],
-						[new Point(-1, 1), new Point(-1, 0), new Point(0, 0), new Point(1, 0)],
-						[new Point(-1, -1), new Point(0, -1), new Point(0, 0), new Point(0, 1)]
-					],
-					this.options
-				);
+				randomFigure = newTetrominoL(variant);
 				break;
 			case 4: // J (blue ricky)
-				randomFigure = new Tetromino(
-					[
-						[new Point(-1, -1), new Point(-1, 0), new Point(0, 0), new Point(1, 0)],
-						[new Point(0, 1), new Point(0, 0), new Point(0, -1), new Point(1, -1)],
-						[new Point(-1, 0), new Point(0, 0), new Point(1, 0), new Point(1, 1)],
-						[new Point(-1, 1), new Point(0, 1), new Point(0, 0), new Point(0, -1)]
-					],
-					this.options
-				);
+				randomFigure = newTetrominoJ(variant);
 				break;
 			case 5: // Z (Cleveland Z)
-				randomFigure = new Tetromino(
-					[
-						[new Point(-1, -1), new Point(0, -1), new Point(0, 0), new Point(1, 0)],
-						[new Point(0, 1), new Point(0, 0), new Point(1, 0), new Point(1, -1)],
-						[new Point(-1, 0), new Point(0, 0), new Point(0, 1), new Point(1, 1)],
-						[new Point(-1, 1), new Point(-1, 0), new Point(0, 0), new Point(0, -1)]
-					],
-					this.options
-				);
+				randomFigure = newTetrominoZ(variant);
 				break;
 			case 6: // S (Rhode Island Z)
-				randomFigure = new Tetromino(
-					[
-						[new Point(-1, 0), new Point(0, 0), new Point(0, -1), new Point(1, -1)],
-						[new Point(0, -1), new Point(0, 0), new Point(1, 0), new Point(1, 1)],
-						[new Point(-1, 1), new Point(0, 1), new Point(0, 0), new Point(1, 0)],
-						[new Point(-1, -1), new Point(-1, 0), new Point(0, 0), new Point(0, 1)]
-					],
-					this.options
-				);
+				randomFigure = newTetrominoS(variant);
 				break;
 			case 7: // T (Teewee)
-				randomFigure = new Tetromino(
-					[
-						[
-							new Point({ x: -1, y: 0, direction: 'vertical' }),
-							new Point({ x: 0, y: 0, direction: 'horizontal' }),
-							new Point({ x: 1, y: 0, direction: 'vertical' }),
-							new Point({ x: 0, y: -1, direction: 'vertical' })
-						],
-						[
-							new Point({ x: 0, y: -1, direction: 'horizontal' }),
-							new Point({ x: 0, y: 0, direction: 'vertical' }),
-							new Point({ x: 0, y: 1, direction: 'horizontal' }),
-							new Point({ x: 1, y: 0, direction: 'horizontal' })
-						],
-						[
-							new Point({ x: -1, y: 0, direction: 'vertical' }),
-							new Point({ x: 0, y: 0, direction: 'horizontal' }),
-							new Point({ x: 1, y: 0, direction: 'vertical' }),
-							new Point({ x: 0, y: 1, direction: 'vertical' })
-						],
-						[
-							new Point({ x: 0, y: -1, direction: 'horizontal' }),
-							new Point({ x: 0, y: 0, direction: 'vertical' }),
-							new Point({ x: 0, y: 1, direction: 'horizontal' }),
-							new Point({ x: -1, y: 0, direction: 'horizontal' })
-						]
-					],
-					this.options
-				);
+				randomFigure = newTetrominoT(variant);
 				break;
 			default: // Isolated point
-				randomFigure = new Tetromino([[new Point(0, 0)]], this.options);
+				randomFigure = new Tetromino([[new Point({ x: 0, y: 0, variant })]]);
 				break;
 		}
 		this.currentFigure = this.nextFigure;
@@ -915,9 +875,9 @@ class Game {
 	 */
 	initExistingPieces = () => {
 		this.existingPieces = [];
-		for (let y = 0; y < Game.ROWS; y++) {
+		for (let y = 0; y < this.options.rows; y++) {
 			this.existingPieces.push([]);
-			for (let x = 0; x < Game.COLUMNS; x++) {
+			for (let x = 0; x < this.options.cols; x++) {
 				this.existingPieces[y].push({
 					taken: false,
 					x,
@@ -947,7 +907,7 @@ class Game {
 	 */
 	absolutePointOutOfLimits = (absoluteX: number, absoluteY: number): boolean => {
 		// absoluteY can be < 0 because starting figures are outside the bounds due to rotating point
-		return absoluteX < 0 || absoluteX > Game.COLUMNS - 1 || absoluteY < -1 || absoluteY > Game.ROWS - 1;
+		return absoluteX < 0 || absoluteX > this.options.cols - 1 || absoluteY < -1 || absoluteY > this.options.rows - 1;
 	};
 
 	/**
@@ -1031,6 +991,9 @@ class Game {
 		return true;
 	};
 
+	/**
+	 * Rotates current figure if is possible
+	 */
 	rotateFigure = () => {
 		// Checks if moving the piece to left or right and then rotating is possible
 		// (4 spaces y the maximum size of a piece)
@@ -1053,24 +1016,46 @@ class Game {
 		this.sounds.denied.play();
 	};
 
-	askUserConfirmResetGame = async () => {
-		this.pauseGame();
-		const result = await Swal.fire({
-			title: 'Reiniciar',
-			text: '¿Quieres reiniciar el juego?',
-			icon: 'question',
-			showCancelButton: true,
-			confirmButtonColor: '#fdbf9c',
-			cancelButtonColor: '#4A42F3',
-			cancelButtonText: 'No',
-			confirmButtonText: 'Sí',
-			heightAuto: false
+	/**
+	 * Confirms restart game
+	 */
+	askUserConfirmResetGame = () => {
+		// If restart game is opened from game menu, a minimum difference
+		// in time is necessary for this modal open after menu's closes
+		setTimeout(() => {
+			this.pauseGame();
+			Swal({
+				title: 'Reiniciar',
+				text: '¿Terminar el juego actual e iniciar uno nuevo desde el principio?',
+				closeOnEsc: true,
+				dangerMode: true,
+				buttons: {
+					cancel: {
+						text: 'No',
+						value: null,
+						visible: true
+					},
+					confirm: {
+						text: 'Sí',
+						value: true
+					}
+				}
+			}).then((val) => {
+				if (val) {
+					this.resetGame();
+				}
+				this.resumeGame();
+			});
 		});
-		if (result.value) {
-			this.resetGame();
-		} else {
-			this.resumeGame();
-		}
+	};
+
+	/**
+	 * Shows game menu
+	 */
+	showMenu = () => {
+		this.pauseGame();
+		this.$divMenu.style.display = 'block';
+		Swal({ content: { element: this.$divMenu }, buttons: {}, closeOnEsc: true }).finally(() => this.resumeGame());
 	};
 }
 export default Game;

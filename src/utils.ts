@@ -1,7 +1,7 @@
 class Utils {
 	// Possible figure or dot colors
 	// blue, red, black
-	static COLORS = ['#0000FF', '#FF0000', '#000000'];
+	static COLORS = ['#00FFFF', '#FF6666', '#000000'];
 
 	/**
 	 * Returns a random rumber from a range
