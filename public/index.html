@@ -6,21 +6,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
     <link rel="stylesheet" href="css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
-    <link rel="icon" type="image/x-icon" href="assets/favicon.ico">
+    <link rel="icon" type="image/x-icon" href="assets/favicon.png">
     <meta name="theme-color" content="#efcc19">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Amblyotris</title>
 </head>
 <body>
-    <div id="telon"></div>
+    <div id="telon">CARGANDO...</div>
     <div id="game">
         <ul class="menu">
             <li><button class="btnPlay">Continuar juego</button></li>
             <li><button class="btnReset">Reiniciar juego</button></li>
-            <li><button class="btnFullScreen">Pantalla completa</button></li>
-            <li><button class="btnSoundOn" hidden>Activar sonidos</button></li>
-            <li><button class="btnSoundOff">Silenciar sonidos</button></li>
             <li><button class="btnSettings">Configurar juego</button></li>
+            <li><button class="btnSoundOn">Activar sonidos</button></li>
+            <li><button class="btnSoundOff">Silenciar sonidos</button></li>
+            <li><button class="btnFullScreen">Ver en pantalla completa</button></li>
+            <li><button class="btnButtons">Ocultar controles</button></li>
         </ul>
         <div class="title">
             <div><img src="assets/kosak1.gif" alt=""></div>
@@ -85,33 +86,58 @@
             let isFullscreen = document.webkitIsFullScreen || document.mozFullScreen || false;
             element.requestFullScreen = element.requestFullScreen || element.webkitRequestFullScreen || element.mozRequestFullScreen || function () { return false; };
             document.cancelFullScreen = document.cancelFullScreen || document.webkitCancelFullScreen || document.mozCancelFullScreen || function () { return false; };
-            isFullscreen ? document.cancelFullScreen() : element.requestFullScreen();
+            if (isFullscreen) {
+                document.querySelector('.btnFullScreen').textContent = 'Ver en pantalla completa';
+                document.cancelFullScreen();
+            } else {
+                document.querySelector('.btnFullScreen').textContent = 'Salir de pantalla completa';
+                element.requestFullScreen();
+            }
         }
-        document.querySelector('.btnFullScreen').addEventListener("click", toggleFullscreen);
+        function toggleControls() {
+            let isControlsOff = document.querySelector('#game').className === 'noControls';
+            if (isControlsOff) {
+                document.querySelector('.btnButtons').textContent = 'Ocultar controles';
+                document.querySelector('#game').className = '';
+            } else {
+                document.querySelector('.btnButtons').textContent = 'Mostrar controles';
+                document.querySelector('#game').className = 'noControls';
+            }
+            resizeAll();
+        }
+        function resizeAll() {
+            let $gameBoard = document.querySelector('.gameBoard');
+            let $game = document.querySelector('#game');
+            let $center = document.querySelector('.center');
+            let width = $gameBoard.offsetWidth;
+            let height = $gameBoard.offsetHeight;
+            let maxWidth = $game.clientWidth - 30;
+            $gameBoard.style.height = '100%';
+            while ( height >  width * 2) {
+                height--;
+                $gameBoard.style.height = height + 'px';
+            }
+            while ( $center.offsetWidth >  maxWidth) {
+                height--;
+                $gameBoard.style.height = height + 'px';
+            }
+        }
         initAmblyotris({
-            baseElement: document.getElementById("game"),
+            baseElement: document.getElementById('game'),
             onInit: () => {
-                let $gameBoard = document.querySelector('.gameBoard');
-                let $game = document.querySelector('#game');
-                let $center = document.querySelector('.center');
-                let width = $gameBoard.offsetWidth;
-                let height = $gameBoard.offsetHeight;
-                let maxWidth = $game.clientWidth - 30;
-                while ( height >  width * 2) {
-                    height--;
-                    $gameBoard.style.height = height + 'px';
-                }
-                while ( $center.offsetWidth >  maxWidth) {
-                    height--;
-                    $gameBoard.style.height = height + 'px';
-                }
-                document.querySelector('#telon').style.opacity = 0;
-                document.querySelector('.center .lateral').style.overflow = 'hidden';
+                resizeAll();
+                setTimeout(() => {
+                    document.querySelector('#telon').style.transition = 'all linear 500ms';
+                    document.querySelector('#telon').style.opacity = 0;
+                }, 1000);
                 setTimeout(() => {
                     document.querySelector('#telon').style.display = 'none';
-                }, 500);
+                }, 1500);
             }
         });
+        document.querySelector('.btnFullScreen').addEventListener('click', toggleFullscreen);
+        document.querySelector('.btnButtons').addEventListener('click', toggleControls);
+        window.addEventListener('resize', resizeAll);
     </script>
 </body>
 </html>

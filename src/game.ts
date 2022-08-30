@@ -8,7 +8,9 @@ interface BoardPoint extends Point {
 }
 
 interface GameSettings {
-	backgroundAlternatives?: string[];
+	colorAlternatives?: string[][];
+	color: string[];
+	opacity: string[];
 	variantAlternatives?: PointVariant[];
 	background?: string;
 	variant?: PointVariant;
@@ -106,10 +108,18 @@ class Game {
 		const squareSize = Math.round(screen.width / 10);
 		const cols = 10;
 		const rows = 20;
+		// First color is for background, then blue, red and black
+		const colorAlternatives = [
+			['#FFFFFF', '#00fee8', '#ff5500', '#000000'],
+			['#81007f', '#04007d', '#800001', '#000000']
+		];
+		// Current opacity of each color. Background opacity is not used.
+		const opacity = ['FF', 'FF', 'FF', 'FF'];
 		let defaults: GameOptions = {
-			backgroundAlternatives: ['#FFFFFF', '#888888', '#AA00AA'],
+			colorAlternatives,
 			variantAlternatives: ['fullColor', 'highContrast', 'veryHighContrast'],
-			background: '#FFFFFF',
+			color: colorAlternatives[0],
+			opacity,
 			variant: 'fullColor',
 			pieceSpeed: 950,
 			cols,
@@ -172,7 +182,7 @@ class Game {
 	 * Shows welcome message
 	 */
 	showWelcome = () => {
-		Swal({ title: 'Bienvenido', text: 'Versión del Tetris para personas com ambliopía. Para usar con anteojos rojos/azules.', closeOnEsc: true }).then(() =>
+		Swal({ title: 'Bienvenido', text: 'Versión del Tetris para personas con ambliopía. Para usar con anteojos rojos/azules.', closeOnEsc: true }).then(() =>
 			this.resumeGame()
 		);
 	};
@@ -246,15 +256,15 @@ class Game {
 		this.$btnSoundOn?.forEach((btn) =>
 			btn.addEventListener('click', () => {
 				this.sounds.mute = false;
-				btn.hidden = true;
-				this.$btnSoundOff.forEach((b) => (b.hidden = false));
+				btn.style.display = 'none';
+				this.$btnSoundOff.forEach((b) => (b.style.display = 'block'));
 			})
 		);
 		this.$btnSoundOff?.forEach((btn) =>
 			btn.addEventListener('click', () => {
 				this.sounds.mute = true;
-				btn.hidden = true;
-				this.$btnSoundOn.forEach((b) => (b.hidden = false));
+				btn.style.display = 'none';
+				this.$btnSoundOn.forEach((b) => (b.style.display = 'block'));
 			})
 		);
 		this.$btnSettings?.forEach((btn) =>
@@ -270,7 +280,7 @@ class Game {
 		);
 
 		// Pauses game when window loses focus
-		window.addEventListener('blur', () => (this.$btnMenu?.length ? this.showMenu() : this.pauseGame()));
+		window.addEventListener('blur', () => (!this.paused ? (this.$btnMenu?.length ? this.showMenu() : this.pauseGame()) : null));
 	};
 
 	/**
@@ -353,8 +363,8 @@ class Game {
 		clearInterval(this.intervalId);
 		this.setMessage('▐ ▌', { font: `bold ${this.options.squareSize * 1.5}px Arial` });
 		// Hides pause buttons and shows play buttons
-		this.$btnResume.forEach((btn) => (btn.hidden = false));
-		this.$btnPause.forEach((btn) => (btn.hidden = true));
+		this.$btnResume.forEach((btn) => (btn.style.display = 'block'));
+		this.$btnPause.forEach((btn) => (btn.style.display = 'none'));
 	};
 
 	/**
@@ -386,8 +396,8 @@ class Game {
 					this.canPlay = true;
 					this.intervalId = setInterval(this.mainLoop.bind(this), this.options.pieceSpeed);
 					// Hides play buttons and shows pause buttons
-					this.$btnResume.forEach((btn) => (btn.hidden = true));
-					this.$btnPause.forEach((btn) => (btn.hidden = false));
+					this.$btnResume.forEach((btn) => (btn.style.display = 'none'));
+					this.$btnPause.forEach((btn) => (btn.style.display = 'block'));
 				}, 350);
 			}, 350);
 		}, 350);
@@ -626,7 +636,7 @@ class Game {
 	 */
 	drawBack = (canvasContext: CanvasRenderingContext2D, color?: string) => {
 		this.clearCanvas(canvasContext);
-		canvasContext.fillStyle = color ?? this.options.background;
+		canvasContext.fillStyle = color ?? this.options.color[0];
 		canvasContext.fill();
 		canvasContext.strokeStyle = '#CCCCCC33';
 		canvasContext.lineWidth = this.options.squareSize / 30;
@@ -732,9 +742,9 @@ class Game {
 		}
 		if (point.variant === 'veryHighContrast') {
 			if (point.direction === 'vertical') {
-				canvasContext.fillRect(x + borderWidth * 2, y, borderWidth, s);
+				canvasContext.fillRect(x + borderWidth * 2, y + borderWidth, borderWidth, s - borderWidth * 2);
 			} else {
-				canvasContext.fillRect(x, y + borderWidth * 2, s, borderWidth);
+				canvasContext.fillRect(x + borderWidth, y + borderWidth * 2, s - borderWidth * 2, borderWidth);
 			}
 			colorItem++;
 		}
@@ -867,7 +877,7 @@ class Game {
 		this.$cnvNext = document.createElement('canvas');
 		this.$cnvNext.setAttribute('width', this.options.squareSize * 5 + 'px'); // One block padding + 4 blocks Width
 		this.$cnvNext.setAttribute('height', this.options.squareSize * 3 + 'px'); // One block padding + 2 blocks height
-		this.$cnvNext.style.background = this.options.background;
+		this.$cnvNext.style.background = this.options.color[0];
 		this.canvasNext = this.$cnvNext.getContext('2d');
 		const nextFigure = this.$baseEl.getElementsByClassName('nextFigure');
 		if (nextFigure.length) {
@@ -878,13 +888,16 @@ class Game {
 		this.$cnvSubNext = document.createElement('canvas');
 		this.$cnvSubNext.setAttribute('width', this.options.squareSize * 5 + 'px'); // One block padding + 4 blocks Width
 		this.$cnvSubNext.setAttribute('height', this.options.squareSize * 3 + 'px'); // One block padding + 2 blocks height
-		this.$cnvSubNext.style.background = this.options.background;
+		this.$cnvSubNext.style.background = this.options.color[0];
 		this.canvasSubNext = this.$cnvSubNext.getContext('2d');
 		const subNextFigure = this.$baseEl.getElementsByClassName('subNextFigure');
 		if (subNextFigure.length) {
 			this.$subNextFigure = subNextFigure[0] as HTMLElement;
 			this.$subNextFigure.appendChild(this.$cnvSubNext);
 		}
+
+		// Makes sound on button hidden
+		this.$btnSoundOn?.forEach((b) => (b.style.display = 'none'));
 	};
 
 	/**
@@ -902,29 +915,32 @@ class Game {
 	 */
 	chooseRandomFigure = () => {
 		let randomFigure: Tetromino;
-		let randomOption = Utils.getRandomNumberInRange(1, 7);
+		const randomOption = Utils.getRandomNumberInRange(1, 7);
+		// this.options.color[0] is bg, then figures
+		const randomColor = Utils.getRandomNumberInRange(1, 3);
+		const color = this.options.color[randomColor] + this.options.opacity[randomColor];
 		const variant = this.options.variant;
 		switch (randomOption) {
 			case 1: // O (smashboy)
-				randomFigure = newTetrominoO(variant);
+				randomFigure = newTetrominoO(variant, color);
 				break;
 			case 2: // I (hero)
-				randomFigure = newTetrominoI(variant);
+				randomFigure = newTetrominoI(variant, color);
 				break;
 			case 3: // L (orange ricky)
-				randomFigure = newTetrominoL(variant);
+				randomFigure = newTetrominoL(variant, color);
 				break;
 			case 4: // J (blue ricky)
-				randomFigure = newTetrominoJ(variant);
+				randomFigure = newTetrominoJ(variant, color);
 				break;
 			case 5: // Z (Cleveland Z)
-				randomFigure = newTetrominoZ(variant);
+				randomFigure = newTetrominoZ(variant, color);
 				break;
 			case 6: // S (Rhode Island Z)
-				randomFigure = newTetrominoS(variant);
+				randomFigure = newTetrominoS(variant, color);
 				break;
 			case 7: // T (Teewee)
-				randomFigure = newTetrominoT(variant);
+				randomFigure = newTetrominoT(variant, color);
 				break;
 			default: // Isolated point
 				randomFigure = new Tetromino([[new Point({ x: 0, y: 0, variant })]]);
@@ -1155,49 +1171,68 @@ class Game {
 		setTimeout(() => {
 			this.pauseGame();
 			const newSettings = {
-				background: this.options.background,
-				variant: this.options.variant
+				color: this.options.color,
+				variant: this.options.variant,
+				opacity: this.options.opacity
 			};
 			const settingsContent = document.createElement('div');
 			const settingsContentBackground = document.createElement('div');
 			const settingsContentVariant = document.createElement('div');
+			const settingsContentOpacity = [document.createElement('div'), document.createElement('div')];
 			settingsContent.style.display = 'flex';
 			settingsContent.style.flexDirection = 'column';
 			settingsContent.style.gap = '10px';
 			settingsContent.style.margin = '20px';
 			settingsContentBackground.style.display = 'flex';
-			settingsContentBackground.style.gap = '10px';
-			settingsContentBackground.style.justifyContent = 'space-evenly';
+			settingsContentBackground.style.justifyContent = 'space-around';
 			settingsContentVariant.style.display = 'flex';
-			settingsContentVariant.style.gap = '10px';
-			settingsContentVariant.style.justifyContent = 'space-evenly';
+			settingsContentVariant.style.justifyContent = 'space-around';
+			settingsContentOpacity[0].style.display = 'flex';
+			settingsContentOpacity[0].style.justifyContent = 'space-around';
+			settingsContentOpacity[1].style.display = 'flex';
+			settingsContentOpacity[1].style.justifyContent = 'space-around';
 
 			const offStyle = '2px solid transparent';
 			const onStyle = '2px solid #AAAAAA';
 
-			const btnBack = [0, 1, 2].map((i) => {
+			const btnBack = [0, 1].map((i) => {
 				const btn = document.createElement('button');
-				btn.setAttribute('name', 'background');
 				btn.style.borderRadius = '10px';
 				btn.style.background = 'transparent';
 				btn.style.padding = '5px';
-				if (newSettings.background === this.options.backgroundAlternatives[i]) {
+				if (newSettings.color === this.options.colorAlternatives[i]) {
 					btn.style.border = onStyle;
 				} else {
 					btn.style.border = offStyle;
 				}
 				const btnCanvas = document.createElement('canvas');
-				btnCanvas.setAttribute('width', this.options.squareSize * 4 + 'px');
-				btnCanvas.setAttribute('height', this.options.squareSize * 3 + 'px');
+				btnCanvas.setAttribute('width', this.options.squareSize * 7 + 'px');
+				btnCanvas.setAttribute('height', this.options.squareSize * 4 + 'px');
 				btnCanvas.style.display = 'block';
-				btnCanvas.style.width = '70px';
+				btnCanvas.style.width = '130px';
 				btnCanvas.style.height = 'auto';
 				btnCanvas.style.borderRadius = '6px';
 				btnCanvas.style.border = '1px solid #CCCCCC';
-				this.drawBack(btnCanvas.getContext('2d'), this.options.backgroundAlternatives[i]);
+				btnCanvas.style.background = this.options.colorAlternatives[i][0];
+				const btnCanvasCtx = btnCanvas.getContext('2d');
+				this.drawBack(btnCanvasCtx, this.options.colorAlternatives[i][0]);
+				let exampleTetromino = newTetrominoT(this.options.variantAlternatives[i], this.options.colorAlternatives[i][1]).getPoints();
+				for (const point of exampleTetromino) {
+					point.x += 2;
+					point.y += 2;
+					point.variant = 'fullColor';
+					this.drawPoint(btnCanvasCtx, point);
+				}
+				exampleTetromino = newTetrominoZ(this.options.variantAlternatives[i], this.options.colorAlternatives[i][2]).getPoints();
+				for (const point of exampleTetromino) {
+					point.x += 4;
+					point.y += 2;
+					point.variant = 'fullColor';
+					this.drawPoint(btnCanvasCtx, point);
+				}
 				btn.appendChild(btnCanvas);
 				btn.addEventListener('click', () => {
-					newSettings.background = this.options.backgroundAlternatives[i];
+					newSettings.color = this.options.colorAlternatives[i];
 					btnBack.forEach((b) => (b.style.border = offStyle));
 					btn.style.border = onStyle;
 				});
@@ -1206,7 +1241,6 @@ class Game {
 			});
 			const btnVar = [0, 1, 2].map((i) => {
 				const btn = document.createElement('button');
-				btn.setAttribute('name', 'variant');
 				btn.style.borderRadius = '10px';
 				btn.style.background = 'transparent';
 				btn.style.padding = '5px';
@@ -1219,17 +1253,16 @@ class Game {
 				btnCanvas.setAttribute('width', this.options.squareSize * 4 + 'px');
 				btnCanvas.setAttribute('height', this.options.squareSize * 3 + 'px');
 				btnCanvas.style.display = 'block';
-				btnCanvas.style.width = '70px';
+				btnCanvas.style.width = '80px';
 				btnCanvas.style.height = 'auto';
 				btnCanvas.style.borderRadius = '6px';
 				btnCanvas.style.background = '#EEEEEE';
 				btnCanvas.style.border = '1px solid transparent';
-				const exampleTetromino = newTetrominoT(this.options.variantAlternatives[i]).getPoints();
+				const exampleTetromino = newTetrominoT(this.options.variantAlternatives[i], '#000000').getPoints();
 				const btnCanvasCtx = btnCanvas.getContext('2d');
 				for (const point of exampleTetromino) {
 					point.x += 1.5;
 					point.y += 1.5;
-					point.color = '#000000';
 					this.drawPoint(btnCanvasCtx, point);
 				}
 				btn.appendChild(btnCanvas);
@@ -1241,9 +1274,49 @@ class Game {
 				settingsContentVariant.appendChild(btn);
 				return btn;
 			});
+			const btnOpac = [0, 1].map((j) =>
+				['FF', 'CC', '99', '66', '33'].map((i) => {
+					const btn = document.createElement('button');
+					btn.style.borderRadius = '10px';
+					btn.style.background = 'transparent';
+					btn.style.padding = '5px';
+					if (newSettings.opacity[j + 1] === i) {
+						btn.style.border = onStyle;
+					} else {
+						btn.style.border = offStyle;
+					}
+					const btnCanvas = document.createElement('canvas');
+					btnCanvas.setAttribute('width', this.options.squareSize * 3 + 'px');
+					btnCanvas.setAttribute('height', this.options.squareSize * 3 + 'px');
+					btnCanvas.style.display = 'block';
+					btnCanvas.style.width = '45px';
+					btnCanvas.style.height = 'auto';
+					btnCanvas.style.borderRadius = '6px';
+					btnCanvas.style.background = '#EEEEEE';
+					btnCanvas.style.border = '1px solid transparent';
+					const color = (j === 0 ? '#0000FF' : j === 1 ? '#FF0000' : '#000000') + i;
+					const exampleTetromino = newTetrominoO('fullColor', color).getPoints();
+					const btnCanvasCtx = btnCanvas.getContext('2d');
+					for (const point of exampleTetromino) {
+						point.x += 0.5;
+						point.y += 1.5;
+						this.drawPoint(btnCanvasCtx, point);
+					}
+					btn.appendChild(btnCanvas);
+					btn.addEventListener('click', () => {
+						newSettings.opacity[j + 1] = i;
+						btnOpac[j].forEach((b) => (b.style.border = offStyle));
+						btn.style.border = onStyle;
+					});
+					settingsContentOpacity[j].appendChild(btn);
+					return btn;
+				})
+			);
 
 			settingsContent.appendChild(settingsContentBackground);
 			settingsContent.appendChild(settingsContentVariant);
+			settingsContent.appendChild(settingsContentOpacity[0]);
+			settingsContent.appendChild(settingsContentOpacity[1]);
 
 			Swal({
 				title: 'Configuraciones',
@@ -1263,11 +1336,12 @@ class Game {
 			}).then((val) => {
 				if (val) {
 					this.options.variant = newSettings.variant;
-					this.options.background = newSettings.background;
+					this.options.color = newSettings.color;
+					this.options.opacity = newSettings.opacity;
 					this.drawBack(this.canvasBack);
 					if (this.$cnvNext) {
-						this.$cnvNext.style.background = this.options.background;
-						this.$cnvSubNext.style.background = this.options.background;
+						this.$cnvNext.style.background = this.options.color[0];
+						this.$cnvSubNext.style.background = this.options.color[0];
 					}
 					this.chooseRandomFigure();
 					this.chooseRandomFigure();
