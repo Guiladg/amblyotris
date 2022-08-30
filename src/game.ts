@@ -8,6 +8,8 @@ interface BoardPoint extends Point {
 }
 
 interface GameSettings {
+	backgroundAlternatives?: string[];
+	variantAlternatives?: PointVariant[];
 	background?: string;
 	variant?: PointVariant;
 	pieceSpeed?: number;
@@ -48,6 +50,7 @@ class Game {
 	nextFigure: Tetromino;
 	subNextFigure: Tetromino;
 	sounds: {
+		mute: boolean;
 		success: HTMLMediaElement;
 		background: HTMLMediaElement;
 		tap: HTMLMediaElement;
@@ -58,6 +61,7 @@ class Game {
 	scorePoints: number;
 	scoreRows: number;
 	scoreLevel: number;
+	scoreRowsInLevel: number;
 
 	$btnDown: HTMLElement[];
 	$btnRight: HTMLElement[];
@@ -71,6 +75,9 @@ class Game {
 	$txtLevel: HTMLElement[];
 	$btnReset: HTMLElement[];
 	$btnMenu: HTMLElement[];
+	$btnSoundOn: HTMLElement[];
+	$btnSoundOff: HTMLElement[];
+	$btnSettings: HTMLElement[];
 	$divMenu: HTMLElement;
 
 	$baseEl: HTMLElement;
@@ -100,9 +107,11 @@ class Game {
 		const cols = 10;
 		const rows = 20;
 		let defaults: GameOptions = {
-			variant: 'fullColor',
+			backgroundAlternatives: ['#FFFFFF', '#888888', '#AA00AA'],
+			variantAlternatives: ['fullColor', 'highContrast', 'veryHighContrast'],
 			background: '#FFFFFF',
-			pieceSpeed: 900,
+			variant: 'fullColor',
+			pieceSpeed: 950,
 			cols,
 			rows,
 			squareSize,
@@ -143,6 +152,7 @@ class Game {
 	resetGame = () => {
 		this.scorePoints = 0;
 		this.scoreRows = 0;
+		this.scoreRowsInLevel = 0;
 		this.scoreLevel = 1;
 		this.sounds.success.currentTime = 0;
 		this.sounds.success.pause();
@@ -153,7 +163,7 @@ class Game {
 		this.restartGlobalXAndY();
 		this.refreshScore();
 		this.pauseGame();
-		this.drawBack();
+		this.drawBack(this.canvasBack);
 		this.drawStack();
 		this.drawActive();
 	};
@@ -187,65 +197,80 @@ class Game {
 				case 'ArrowUp':
 					this.attemptRotate();
 					break;
-				case 'KeyP':
-					this.pauseOrResumeGame();
-					break;
 				case 'Space':
 					this.hardDrop();
 					break;
 			}
 		});
 
-		this.$btnDown.forEach((btn) =>
+		this.$btnDown?.forEach((btn) =>
 			btn.addEventListener('mousedown', () => {
 				this.attemptMoveDown();
 			})
 		);
-		this.$btnRight.forEach((btn) =>
+		this.$btnRight?.forEach((btn) =>
 			btn.addEventListener('mousedown', () => {
 				this.attemptMoveRight();
 			})
 		);
-		this.$btnLeft.forEach((btn) =>
+		this.$btnLeft?.forEach((btn) =>
 			btn.addEventListener('mousedown', () => {
 				this.attemptMoveLeft();
 			})
 		);
-		this.$btnRotate.forEach((btn) =>
+		this.$btnRotate?.forEach((btn) =>
 			btn.addEventListener('mousedown', () => {
 				this.attemptRotate();
 			})
 		);
-		this.$btnHardDrop.forEach((btn) =>
+		this.$btnHardDrop?.forEach((btn) =>
 			btn.addEventListener('mousedown', () => {
 				this.hardDrop();
 			})
 		);
-		[...this.$btnPause, ...this.$btnResume].forEach(($btn) =>
+		[...this.$btnPause, ...this.$btnResume]?.forEach(($btn) =>
 			$btn.addEventListener('click', () => {
 				this.pauseOrResumeGame();
 			})
 		);
-		this.$btnReset.forEach((btn) =>
+		this.$btnReset?.forEach((btn) =>
 			btn.addEventListener('click', () => {
 				this.askUserConfirmResetGame();
 			})
 		);
-		this.$btnMenu.forEach((btn) =>
+		this.$btnMenu?.forEach((btn) =>
 			btn.addEventListener('click', () => {
 				this.showMenu();
 			})
 		);
-
+		this.$btnSoundOn?.forEach((btn) =>
+			btn.addEventListener('click', () => {
+				this.sounds.mute = false;
+				btn.hidden = true;
+				this.$btnSoundOff.forEach((b) => (b.hidden = false));
+			})
+		);
+		this.$btnSoundOff?.forEach((btn) =>
+			btn.addEventListener('click', () => {
+				this.sounds.mute = true;
+				btn.hidden = true;
+				this.$btnSoundOn.forEach((b) => (b.hidden = false));
+			})
+		);
+		this.$btnSettings?.forEach((btn) =>
+			btn.addEventListener('click', () => {
+				this.showSettings();
+			})
+		);
 		// Every button inside the menu closes it
-		Array.from(this.$divMenu.getElementsByTagName('button')).forEach((btn) =>
+		Array.from(this.$divMenu.getElementsByTagName('button'))?.forEach((btn) =>
 			btn.addEventListener('click', () => {
 				Swal.close();
 			})
 		);
 
 		// Pauses game when window loses focus
-		window.addEventListener('blur', () => (this.$btnMenu.length ? this.showMenu() : this.pauseGame()));
+		window.addEventListener('blur', () => (this.$btnMenu?.length ? this.showMenu() : this.pauseGame()));
 	};
 
 	/**
@@ -288,6 +313,7 @@ class Game {
 		// Downs figure till end
 		while (this.figureCanMoveDown()) {
 			this.globalY++;
+			// Adds 1 point per square
 			this.scorePoints++;
 			this.refreshScore();
 		}
@@ -325,7 +351,7 @@ class Game {
 		// Stop falling pieces
 		this.canPlay = false;
 		clearInterval(this.intervalId);
-		this.setMessage('▐ ▌', { font: 'bold 30px Arial' });
+		this.setMessage('▐ ▌', { font: `bold ${this.options.squareSize * 1.5}px Arial` });
 		// Hides pause buttons and shows play buttons
 		this.$btnResume.forEach((btn) => (btn.hidden = false));
 		this.$btnPause.forEach((btn) => (btn.hidden = true));
@@ -353,7 +379,9 @@ class Game {
 					this.starting = false;
 					this.hideMessage();
 					// Plays music
-					this.sounds.background.play();
+					if (!this.sounds.mute) {
+						this.sounds.background.play();
+					}
 					// Start falling pieces
 					this.canPlay = true;
 					this.intervalId = setInterval(this.mainLoop.bind(this), this.options.pieceSpeed);
@@ -399,6 +427,7 @@ class Game {
 
 	/**
 	 * Adds the number of deleted rows to the score and the corresponding points
+	 * Adds one to current level if
 	 * @param {number} rows rows recently deleted
 	 */
 	addScore = (rows: number[]) => {
@@ -406,6 +435,29 @@ class Game {
 		let score = [0, 40, 100, 300, 1200];
 		this.scorePoints += score[rows.length];
 		this.scoreRows += rows.length;
+		this.scoreRowsInLevel += rows.length;
+		// Changes level when needed
+		if (this.scoreLevel <= 10) {
+			// Until level 9, level up after 10 lines * level
+			if (this.scoreRowsInLevel >= this.scoreLevel * 10) {
+				this.scoreLevel++;
+				this.scoreRowsInLevel = this.scoreRowsInLevel - this.scoreLevel * 10; // Keep extra lines
+			}
+		} else if (this.scoreLevel <= 15) {
+			// Until level 15, level up after 100 lines
+			if (this.scoreRowsInLevel >= 100) {
+				this.scoreLevel++;
+				this.scoreRowsInLevel = this.scoreRowsInLevel - 100; // Keep extra lines
+			}
+		} else {
+			// After level 15, level up after 150
+			if (this.scoreRowsInLevel >= 150) {
+				this.scoreLevel++;
+				this.scoreRowsInLevel = this.scoreRowsInLevel - 150; // Keep extra lines
+			}
+		}
+		// Speed of pieces increases 50 ms per level
+		this.options.pieceSpeed = 1000 - this.scoreLevel * 50;
 		this.refreshScore();
 	};
 
@@ -491,9 +543,11 @@ class Game {
 			// Adds score
 			this.addScore(deletableRows);
 			// Stop and play sound
-			this.sounds.success.pause();
-			this.sounds.success.currentTime = 0;
-			this.sounds.success.play();
+			if (!this.sounds.mute) {
+				this.sounds.success.pause();
+				this.sounds.success.currentTime = 0;
+				this.sounds.success.play();
+			}
 			// Stop falling process
 			this.canPlay = false;
 			// Paint deletable rows
@@ -540,7 +594,11 @@ class Game {
 	};
 
 	endFallingProcess = () => {
-		this.sounds.tap.play();
+		if (!this.sounds.mute) {
+			this.sounds.tap.pause();
+			this.sounds.tap.currentTime = 0;
+			this.sounds.tap.play();
+		}
 		this.moveFigurePointsToExistingPieces();
 		if (this.playerLoses()) {
 			this.canPlay = false;
@@ -566,16 +624,16 @@ class Game {
 	/**
 	 * Draws the background of the board
 	 */
-	drawBack = () => {
-		this.clearCanvas(this.canvasBack);
-		this.canvasBack.fillStyle = this.options.background;
-		this.canvasBack.fill();
-		this.canvasBack.strokeStyle = '#00000008';
-		this.canvasBack.lineWidth = this.options.squareSize / 30;
+	drawBack = (canvasContext: CanvasRenderingContext2D, color?: string) => {
+		this.clearCanvas(canvasContext);
+		canvasContext.fillStyle = color ?? this.options.background;
+		canvasContext.fill();
+		canvasContext.strokeStyle = '#CCCCCC33';
+		canvasContext.lineWidth = this.options.squareSize / 30;
 		for (let y = 0; y < this.options.rows; y++) {
 			for (let x = 0; x < this.options.cols; x++) {
-				this.canvasBack.fillRect(x * this.options.squareSize, y * this.options.squareSize, this.options.squareSize, this.options.squareSize);
-				this.canvasBack.strokeRect(x * this.options.squareSize, y * this.options.squareSize, this.options.squareSize, this.options.squareSize);
+				canvasContext.fillRect(x * this.options.squareSize, y * this.options.squareSize, this.options.squareSize, this.options.squareSize);
+				canvasContext.strokeRect(x * this.options.squareSize, y * this.options.squareSize, this.options.squareSize, this.options.squareSize);
 			}
 		}
 	};
@@ -704,11 +762,16 @@ class Game {
 		this.clearCanvas(this.canvasMessage);
 		this.canvasMessage.textAlign = 'center';
 		this.canvasMessage.fillStyle = options?.fillStyle ?? '#000000';
-		const font = options?.font ?? 'bold 50px Arial';
+		this.canvasMessage.strokeStyle = '#FFFFFF';
+		this.canvasMessage.lineWidth = this.options.squareSize / 8;
+		const font = options?.font ?? `bold ${this.options.squareSize * 3}px Arial`;
 		this.canvasMessage.font = font;
 		// Calculates veretical offset depending on font size (10 is for making it better)
 		const offsetY = Number(font.match(/\d+/)?.[0] ?? 0) / 2 - 10;
+		// Prints on screen
+		this.canvasMessage.strokeText(text, this.options.width / 2, this.options.height / 2 + offsetY);
 		this.canvasMessage.fillText(text, this.options.width / 2, this.options.height / 2 + offsetY);
+		// Shows canvas
 		this.$cnvMessage.style.opacity = '1';
 	};
 	hideMessage = () => {
@@ -721,6 +784,7 @@ class Game {
 	 */
 	initSounds = () => {
 		this.sounds = {
+			mute: false,
 			background: Utils.loadSound('assets/theme.mp3', true),
 			success: Utils.loadSound('assets/success.wav'),
 			denied: Utils.loadSound('assets/denied.wav'),
@@ -743,10 +807,12 @@ class Game {
 		this.$btnRight = Array.from(this.$baseEl.getElementsByClassName('btnRight') as HTMLCollectionOf<HTMLElement>);
 		this.$btnLeft = Array.from(this.$baseEl.getElementsByClassName('btnLeft') as HTMLCollectionOf<HTMLElement>);
 		this.$btnReset = Array.from(this.$baseEl.getElementsByClassName('btnReset') as HTMLCollectionOf<HTMLElement>);
+		this.$btnSoundOn = Array.from(this.$baseEl.getElementsByClassName('btnSoundOn') as HTMLCollectionOf<HTMLElement>);
+		this.$btnSoundOff = Array.from(this.$baseEl.getElementsByClassName('btnSoundOff') as HTMLCollectionOf<HTMLElement>);
+		this.$btnSettings = Array.from(this.$baseEl.getElementsByClassName('btnSettings') as HTMLCollectionOf<HTMLElement>);
 		this.$btnMenu = Array.from(this.$baseEl.getElementsByClassName('btnMenu') as HTMLCollectionOf<HTMLElement>);
 		this.$divMenu = this.$baseEl.querySelector('.menu');
 
-		// Creates canvases for board and current element falling
 		this.$gameBoard = this.$baseEl.querySelector('.gameBoard');
 		if (!this.$gameBoard) {
 			console.error('An element with lcass gameBoard is mandatory to initialize.');
@@ -754,6 +820,7 @@ class Game {
 		}
 		this.$gameBoard.style.position = 'relative';
 
+		// Creates canvases for board and current element falling
 		this.$cnvBack = document.createElement('canvas');
 		this.$cnvBack.setAttribute('width', this.options.width + 'px');
 		this.$cnvBack.setAttribute('height', this.options.height + 'px');
@@ -768,6 +835,8 @@ class Game {
 		this.$cnvActive.setAttribute('height', this.options.height + 'px');
 		this.$cnvActive.style.position = 'absolute';
 		this.$cnvActive.style.zIndex = '2';
+
+		// Creates canvases for deleting animation and messages
 		this.$cnvFront = document.createElement('canvas');
 		this.$cnvFront.setAttribute('width', this.options.width + 'px');
 		this.$cnvFront.setAttribute('height', this.options.height + 'px');
@@ -782,6 +851,7 @@ class Game {
 		this.$cnvMessage.style.transition = 'opacity 0.3s ease';
 		this.canvasMessage = this.$cnvMessage.getContext('2d');
 
+		// Append canvases to DOM
 		this.$gameBoard.appendChild(this.$cnvMessage);
 		this.$gameBoard.appendChild(this.$cnvStack);
 		this.$gameBoard.appendChild(this.$cnvActive);
@@ -907,7 +977,7 @@ class Game {
 	 */
 	absolutePointOutOfLimits = (absoluteX: number, absoluteY: number): boolean => {
 		// absoluteY can be < 0 because starting figures are outside the bounds due to rotating point
-		return absoluteX < 0 || absoluteX > this.options.cols - 1 || absoluteY < -1 || absoluteY > this.options.rows - 1;
+		return absoluteX < 0 || absoluteX > this.options.cols - 1 || absoluteY < -2 || absoluteY > this.options.rows - 1;
 	};
 
 	/**
@@ -938,6 +1008,10 @@ class Game {
 		return Boolean(emptyPoint || hasSameCoordinateOfFigurePoint) && !outOfLimits;
 	};
 
+	/**
+	 * Returns if current figure has room to rotate
+	 * @returns {boolean} true if can rotate
+	 */
 	figureCanMoveRight = () => {
 		if (!this.currentFigure) return false;
 		for (const point of this.currentFigure.getPoints()) {
@@ -949,6 +1023,10 @@ class Game {
 		return true;
 	};
 
+	/**
+	 * Returns if current figure has room to move leftwards
+	 * @returns {boolean} true if can move
+	 */
 	figureCanMoveLeft = () => {
 		if (!this.currentFigure) return false;
 		for (const point of this.currentFigure.getPoints()) {
@@ -960,6 +1038,10 @@ class Game {
 		return true;
 	};
 
+	/**
+	 * Returns if current figure has room to move downwards
+	 * @returns {boolean} true if can move
+	 */
 	figureCanMoveDown = () => {
 		if (!this.currentFigure) return false;
 		for (const point of this.currentFigure.getPoints()) {
@@ -971,6 +1053,10 @@ class Game {
 		return true;
 	};
 
+	/**
+	 * Returns if current figure has room to move rightwards
+	 * @returns {boolean} true if can move
+	 */
 	figureCanRotate = (offsetX = 0) => {
 		// Creates new array with next rotation point
 		let newPointsAfterRotate = [...this.currentFigure.getNextRotation()];
@@ -992,7 +1078,7 @@ class Game {
 	};
 
 	/**
-	 * Rotates current figure if is possible
+	 * Rotates current figure if it is possible
 	 */
 	rotateFigure = () => {
 		// Checks if moving the piece to left or right and then rotating is possible
@@ -1011,16 +1097,18 @@ class Game {
 				return;
 			}
 		}
-		this.sounds.denied.pause();
-		this.sounds.denied.currentTime = 0;
-		this.sounds.denied.play();
+		if (!this.sounds.mute) {
+			this.sounds.denied.pause();
+			this.sounds.denied.currentTime = 0;
+			this.sounds.denied.play();
+		}
 	};
 
 	/**
 	 * Confirms restart game
 	 */
 	askUserConfirmResetGame = () => {
-		// If restart game is opened from game menu, a minimum difference
+		// If restart game alert is opened from game menu, a minimum difference
 		// in time is necessary for this modal open after menu's closes
 		setTimeout(() => {
 			this.pauseGame();
@@ -1056,6 +1144,138 @@ class Game {
 		this.pauseGame();
 		this.$divMenu.style.display = 'block';
 		Swal({ content: { element: this.$divMenu }, buttons: {}, closeOnEsc: true }).finally(() => this.resumeGame());
+	};
+
+	/**
+	 * Shows settings menu
+	 */
+	showSettings = () => {
+		// If settings menu is opened from game menu, a minimum difference
+		// in time is necessary for this modal open after menu's closes
+		setTimeout(() => {
+			this.pauseGame();
+			const newSettings = {
+				background: this.options.background,
+				variant: this.options.variant
+			};
+			const settingsContent = document.createElement('div');
+			const settingsContentBackground = document.createElement('div');
+			const settingsContentVariant = document.createElement('div');
+			settingsContent.style.display = 'flex';
+			settingsContent.style.flexDirection = 'column';
+			settingsContent.style.gap = '10px';
+			settingsContent.style.margin = '20px';
+			settingsContentBackground.style.display = 'flex';
+			settingsContentBackground.style.gap = '10px';
+			settingsContentBackground.style.justifyContent = 'space-evenly';
+			settingsContentVariant.style.display = 'flex';
+			settingsContentVariant.style.gap = '10px';
+			settingsContentVariant.style.justifyContent = 'space-evenly';
+
+			const offStyle = '2px solid transparent';
+			const onStyle = '2px solid #AAAAAA';
+
+			const btnBack = [0, 1, 2].map((i) => {
+				const btn = document.createElement('button');
+				btn.setAttribute('name', 'background');
+				btn.style.borderRadius = '10px';
+				btn.style.background = 'transparent';
+				btn.style.padding = '5px';
+				if (newSettings.background === this.options.backgroundAlternatives[i]) {
+					btn.style.border = onStyle;
+				} else {
+					btn.style.border = offStyle;
+				}
+				const btnCanvas = document.createElement('canvas');
+				btnCanvas.setAttribute('width', this.options.squareSize * 4 + 'px');
+				btnCanvas.setAttribute('height', this.options.squareSize * 3 + 'px');
+				btnCanvas.style.display = 'block';
+				btnCanvas.style.width = '70px';
+				btnCanvas.style.height = 'auto';
+				btnCanvas.style.borderRadius = '6px';
+				btnCanvas.style.border = '1px solid #CCCCCC';
+				this.drawBack(btnCanvas.getContext('2d'), this.options.backgroundAlternatives[i]);
+				btn.appendChild(btnCanvas);
+				btn.addEventListener('click', () => {
+					newSettings.background = this.options.backgroundAlternatives[i];
+					btnBack.forEach((b) => (b.style.border = offStyle));
+					btn.style.border = onStyle;
+				});
+				settingsContentBackground.appendChild(btn);
+				return btn;
+			});
+			const btnVar = [0, 1, 2].map((i) => {
+				const btn = document.createElement('button');
+				btn.setAttribute('name', 'variant');
+				btn.style.borderRadius = '10px';
+				btn.style.background = 'transparent';
+				btn.style.padding = '5px';
+				if (newSettings.variant === this.options.variantAlternatives[i]) {
+					btn.style.border = onStyle;
+				} else {
+					btn.style.border = offStyle;
+				}
+				const btnCanvas = document.createElement('canvas');
+				btnCanvas.setAttribute('width', this.options.squareSize * 4 + 'px');
+				btnCanvas.setAttribute('height', this.options.squareSize * 3 + 'px');
+				btnCanvas.style.display = 'block';
+				btnCanvas.style.width = '70px';
+				btnCanvas.style.height = 'auto';
+				btnCanvas.style.borderRadius = '6px';
+				btnCanvas.style.background = '#EEEEEE';
+				btnCanvas.style.border = '1px solid transparent';
+				const exampleTetromino = newTetrominoT(this.options.variantAlternatives[i]).getPoints();
+				const btnCanvasCtx = btnCanvas.getContext('2d');
+				for (const point of exampleTetromino) {
+					point.x += 1.5;
+					point.y += 1.5;
+					point.color = '#000000';
+					this.drawPoint(btnCanvasCtx, point);
+				}
+				btn.appendChild(btnCanvas);
+				btn.addEventListener('click', () => {
+					newSettings.variant = this.options.variantAlternatives[i];
+					btnVar.forEach((b) => (b.style.border = offStyle));
+					btn.style.border = onStyle;
+				});
+				settingsContentVariant.appendChild(btn);
+				return btn;
+			});
+
+			settingsContent.appendChild(settingsContentBackground);
+			settingsContent.appendChild(settingsContentVariant);
+
+			Swal({
+				title: 'Configuraciones',
+				content: { element: settingsContent },
+				closeOnEsc: true,
+				buttons: {
+					cancel: {
+						text: 'Cancelar',
+						value: null,
+						visible: true
+					},
+					confirm: {
+						text: 'Aceptar',
+						value: true
+					}
+				}
+			}).then((val) => {
+				if (val) {
+					this.options.variant = newSettings.variant;
+					this.options.background = newSettings.background;
+					this.drawBack(this.canvasBack);
+					if (this.$cnvNext) {
+						this.$cnvNext.style.background = this.options.background;
+						this.$cnvSubNext.style.background = this.options.background;
+					}
+					this.chooseRandomFigure();
+					this.chooseRandomFigure();
+					this.chooseRandomFigure();
+				}
+				this.resumeGame();
+			});
+		});
 	};
 }
 export default Game;
