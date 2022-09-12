@@ -13,9 +13,27 @@ body {
 	margin: 0;
 	width: 100%;
 	text-align: center;
+	touch-action: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+body * {
+	touch-action: none;
+	-webkit-user-select: none;
+	user-select: none;
+}
+a {
+	color: #606;
+	text-decoration: none;
+}
+a:hover {
+	text-decoration: underline;
 }
 div {
 	box-sizing: border-box;
+}
+.swal-button--confirm {
+	background: #606;
 }
 #game {
 	height: 100%;
@@ -43,14 +61,18 @@ div {
 	flex-direction: column;
 	justify-content: flex-start;
 	align-items: center;
-	width: 100px;
-	margin-left: 5%;
-	max-height: 100%;
 	overflow: hidden;
+	width: 85px;
+	min-width: 85px;
+	max-width: 85px;
+	max-height: 100%;
 }
 .center .lateral canvas {
-	max-width: 100%;
-	max-height: 80px;
+	width: 100%;
+	height: auto;
+}
+.sep {
+	width: 15px;
 }
 .txtScore,
 .txtLevel,
@@ -73,31 +95,30 @@ div {
 	margin-bottom: 20px;
 }
 .proximasPiezas {
-	display: flex;
-	flex-direction: column;
 	border: 2px solid white;
 	box-shadow: 0 0 20px #fffa;
-	padding: 2px;
 }
 .proximasPiezas canvas {
 	display: block;
+}
+.nextFigure {
+	width: calc(100% - 4px);
+	margin: 2px 2px 0 2px;
+}
+.subNextFigure {
+	width: calc(100% - 4px);
+	margin: 0 2px 2px 2px;
 }
 .main {
 	border: 2px solid white;
 	box-shadow: 0 0 20px #fffa;
 	padding: 2px;
-	height: 100%;
+	min-width: 1px;
 }
 .main_inner {
 	position: relative;
-	height: 100%;
-}
-.gameBoard {
-	height: 100%;
 }
 .gameBoard canvas {
-	height: 100%;
-	width: auto;
 	display: block;
 }
 .controls {
@@ -250,6 +271,9 @@ h1 {
 	font-size: 25px;
 	margin: 0 0 auto 0;
 }
+h1 img {
+	display: block;
+}
 .fa-power-off,
 .fa-expand-alt {
 	font-size: 120%;
@@ -263,7 +287,6 @@ body.swal2-height-auto {
 	width: auto;
 }
 .menu {
-	display: none;
 	padding: 0;
 }
 .menu li {
@@ -276,20 +299,6 @@ body.swal2-height-auto {
 	border: 0;
 	background: transparent;
 }
-#telon {
-	height: 100vh;
-	width: 100vw;
-	position: fixed;
-	z-index: 100000;
-	background: #8f7c21;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	font-size: 200%;
-	font-weight: 700;
-	flex-direction: column;
-	gap: 20px;
-}
 #game.noControls .controls .b .r {
 	display: none;
 }
@@ -298,4 +307,94 @@ body.swal2-height-auto {
 }
 #game.noControls .controls .l {
 	padding-left: 0;
+}
+#telon {
+	top: 0;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	position: fixed;
+	z-index: 100000;
+	background: white;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	font-size: 200%;
+	font-weight: 700;
+	flex-direction: column;
+	gap: 20px;
+}
+#telon .tetro1 {
+	position: fixed;
+	left: 5vw;
+	top: 5vw;
+}
+#telon .tetro1 div {
+	width: 7vw;
+	height: 7vw;
+	background: #f00;
+	border: 1px solid #fff;
+}
+#telon .tetro1 div.b4 {
+	position: absolute;
+	top: 0;
+	left: 7vw;
+}
+#telon .tetro2 {
+	position: fixed;
+	right: 5vw;
+	bottom: 5vw;
+}
+#telon .tetro2 div {
+	width: 7vw;
+	height: 7vw;
+	background: #00f;
+	border: 1px solid #fff;
+}
+#telon .tetro2 div.b4 {
+	position: absolute;
+	bottom: 0;
+	left: -7vw;
+}
+#telon .tetro3 {
+	position: fixed;
+	left: 15vw;
+	bottom: 35vw;
+}
+#telon .tetro3 div {
+	width: 7vw;
+	height: 7vw;
+	background: #333;
+	border: 1px solid #fff;
+}
+#telon .tetro3 div.b3 {
+	position: absolute;
+	top: -7vw;
+	left: 7vw;
+}
+#telon .tetro3 div.b4 {
+	position: absolute;
+	top: 0;
+	left: 7vw;
+}
+#telon .tetro4 {
+	position: fixed;
+	right: 22vw;
+	top: 35vw;
+}
+#telon .tetro4 div {
+	width: 7vw;
+	height: 7vw;
+	background: #333;
+	border: 1px solid #fff;
+}
+#telon .tetro4 div.b3 {
+	position: absolute;
+	top: 0;
+	left: -7vw;
+}
+#telon .tetro4 div.b4 {
+	position: absolute;
+	top: 7vw;
+	left: 7vw;
 }

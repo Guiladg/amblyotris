@@ -1,41 +1,7 @@
-# tetris-javascript
+# Amblyotris
 
-Tetris escrito con JavaScript. Se usa canvas para dibujar el tablero.
+This is a version of Tetris made for people with amblyopia who need to train the "lazy eye".
 
-![Parzibyte jugando Tetris programado con JavaScript](https://parzibyte.me/blog/wp-content/uploads/2020/11/Jugando-Tetris-en-JavaScript-juego-open-source.png)
+The code is partially based on Parzibyte's tutorial (https://parzibyte.me/blog/2020/11/02/tetris-javascript-open-source/) with many improvements and changes, part of them inspired by Tetr.js (https://github.com/simonlc/tetr.js). Thanks a lot for your work!
 
-**By parzibyte**
-
-**Tutorial**: https://parzibyte.me/blog/2020/11/02/tetris-javascript-open-source/
-
-**Demo**: https://parzibyte.github.io/tetris-javascript/
-
-# Documentación del estilo de código
-
-Preferimos algo legible a algo "optimizado". Por ejemplo, en lugar de:
-
-```javascript
-return !tablero[y][x].ocupado;
-```
-
-Se prefiere:
-
-```javascript
-if (tablero[y][x].ocupado) {
-	return false;
-} else {
-	return true;
-}
-```
-
-# Docs
-
-**Absolute point**: A point with x and y that is absolute to the game board
-
-**Relative point**: A point with inner x and y; for example, a point that conforms a figure
-
-# Files
-
-# About
-
-Proudly brought to you by parzibyte (https://parzibyte.me/blog)
+**Online game**: https://dresiribarren.com.ar/games/amblyotris/

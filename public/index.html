@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="stylesheet" href="css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" type="image/x-icon" href="assets/favicon.png">
@@ -12,16 +12,64 @@
     <title>Amblyotris</title>
 </head>
 <body>
-    <div id="telon">CARGANDO...</div>
+    <div id="telon">
+        CARGANDO...
+        <div class="tetro1">
+            <div class="b1"></div>
+            <div class="b2"></div>
+            <div class="b3"></div>
+            <div class="b4"></div>
+        </div>
+        <div class="tetro2">
+            <div class="b1"></div>
+            <div class="b2"></div>
+            <div class="b3"></div>
+            <div class="b4"></div>
+        </div>
+        <div class="tetro3">
+            <div class="b1"></div>
+            <div class="b2"></div>
+            <div class="b3"></div>
+            <div class="b4"></div>
+        </div>
+        <div class="tetro4">
+            <div class="b1"></div>
+            <div class="b2"></div>
+            <div class="b3"></div>
+            <div class="b4"></div>
+        </div>
+    </div>
     <div id="game">
+        <div class="welcome">
+            <h2>¡Bienvenidos!</h2>
+            <p>
+                Esta es una versión del Tetris para personas con ambliopía, preparada para ser usada con anteojos, sobre de los que ya usa, pero con vidrios de color rojo y azul/cian (anáglifos).
+            </p>
+            <p></p>
+                Si se cuenta con teclado, las piezas pueden moverse con 
+                <i class="fas fa-arrow-left"></i>
+                <i class="fas fa-arrow-right"></i>
+                <i class="fas fa-arrow-down"></i>,
+                usando <i class="fas fa-arrow-up"></i> para rotarlas y la <b>barra espaciadora</b> para hacerlas caer.
+            </p>
+            <p>
+                Inspirado en el Dr. Mario Cerrella y su <a href="https://dresiribarren.com.ar/visual-training-2/" target="_blank">Visual Training</a>, un grupo de oftalmólogos, ortoptistas y programadores, decidimos desarrollar este y otros juegos online que permitan tratar el "Ojo Vago".
+            </p>
+            <p>
+                Para poder continuar con esta tarea, necesitamos de tu ayuda. Si te interesa, podés realizar una donación, entrando al siguiente <a href="https://dresiribarren.com.ar/investigacion/" target="_blank">vínculo</a>.
+            </p>
+            <p>
+                El código fuente de este juego puede encontrarse en <a href="https://github.com/Guiladg/amblyotris" style="white-space: nowrap;"><i class="fab fa-github"></i> GitHub</a>.
+            </p>
+        </div>
         <ul class="menu">
-            <li><button class="btnPlay">Continuar juego</button></li>
-            <li><button class="btnReset">Reiniciar juego</button></li>
-            <li><button class="btnSettings">Configurar juego</button></li>
-            <li><button class="btnSoundOn">Activar sonidos</button></li>
-            <li><button class="btnSoundOff">Silenciar sonidos</button></li>
-            <li><button class="btnFullScreen">Ver en pantalla completa</button></li>
-            <li><button class="btnButtons">Ocultar controles</button></li>
+            <li><button class="btnPlay" tabindex="-1">Continuar juego</button></li>
+            <li><button class="btnReset" tabindex="-1">Reiniciar juego</button></li>
+            <li><button class="btnSettings" tabindex="-1">Configurar juego</button></li>
+            <li><button class="btnSoundOn" tabindex="-1">Activar sonidos</button></li>
+            <li><button class="btnSoundOff" tabindex="-1">Silenciar sonidos</button></li>
+            <li><button class="btnFullScreen" tabindex="-1">Ver en pantalla completa</button></li>
+            <li><button class="btnButtons" tabindex="-1">Ocultar controles</button></li>
         </ul>
         <div class="title">
             <div><img src="assets/kosak1.gif" alt=""></div>
@@ -30,10 +78,9 @@
         </div>
         <div class="center">
             <div class="main">
-                <div class="main_inner">
-                    <div class="gameBoard"></div>
-                </div>
+                <div class="gameBoard"></div>
             </div>
+            <div class="sep"></div>
             <div class="lateral">
                 <div class="puntaje">PUNTAJE</div>
                 <div class="txtScore"></div>
@@ -53,23 +100,23 @@
                 <div class="l">
                     <div class="t">
                         <div>
-                            <button class="btnMenu"></button>
+                            <button class="btnMenu" tabindex="-1"></button>
                             <span>MENÚ</span>
                         </div>
                     </div>
-                    <button class="btnHardDrop"><i class="fas fa-angle-double-down"></i></button>
+                    <button class="btnHardDrop" tabindex="-1"><i class="fas fa-angle-double-down"></i></button>
                 </div>
                 <div class="r">
                     <div class="pad">
                         <div class="l">
-                            <button class="btnLeft"><i class="fas fa-angle-left"></i></button>
+                            <button class="btnLeft" tabindex="-1"><i class="fas fa-angle-left"></i></button>
                         </div>
                         <div class="c">
-                            <button class="btnRotate"><i class="fas fa-redo"></i></button>    
-                            <button class="btnDown"><i class="fas fa-angle-down"></i></button>
+                            <button class="btnRotate" tabindex="-1"><i class="fas fa-redo"></i></button>    
+                            <button class="btnDown" tabindex="-1"><i class="fas fa-angle-down"></i></button>
                         </div>
                         <div class="r">
-                            <button class="btnRight"><i class="fas fa-angle-right"></i></button>
+                            <button class="btnRight" tabindex="-1"><i class="fas fa-angle-right"></i></button>
                         </div>
                     </div>
                 </div>
@@ -78,7 +125,8 @@
     </div>
     <script src="js/index.js"></script>
     <script>
-        function toggleFullscreen(event) {
+        let game;
+        toggleFullscreen = (event) => {
             let element = document.documentElement;
             if (event instanceof HTMLElement) {
                 element = event;
@@ -94,7 +142,7 @@
                 element.requestFullScreen();
             }
         }
-        function toggleControls() {
+        toggleControls = () => {
             let isControlsOff = document.querySelector('#game').className === 'noControls';
             if (isControlsOff) {
                 document.querySelector('.btnButtons').textContent = 'Ocultar controles';
@@ -103,32 +151,33 @@
                 document.querySelector('.btnButtons').textContent = 'Mostrar controles';
                 document.querySelector('#game').className = 'noControls';
             }
+            document.querySelector('.btnButtons').blur();
             resizeAll();
         }
-        function resizeAll() {
-            let $gameBoard = document.querySelector('.gameBoard');
-            let $game = document.querySelector('#game');
-            let $center = document.querySelector('.center');
-            let width = $gameBoard.offsetWidth;
-            let height = $gameBoard.offsetHeight;
-            let maxWidth = $game.clientWidth - 30;
-            $gameBoard.style.height = '100%';
-            while ( height >  width * 2) {
+        resizeAll = () => {
+            document.querySelector('.gameBoard').style.height = screen.height + 'px';
+            document.querySelector('.gameBoard').style.width = screen.height / 2 + 'px';
+            let newHeight = document.querySelector('.center').clientHeight - 36;
+            document.querySelector('.gameBoard').style.height = newHeight + 'px';
+            document.querySelector('.gameBoard').style.width = (Math.floor(newHeight / 2)) + 'px';
+            let maxWidth = document.querySelector('#game').clientWidth - 30;
+            let height = document.querySelector('.gameBoard').clientHeight;
+            while (document.querySelector('.center').clientWidth > maxWidth) {
                 height--;
-                $gameBoard.style.height = height + 'px';
+                document.querySelector('.gameBoard').style.height = height + 'px';
+                document.querySelector('.gameBoard').style.width = Math.floor(height) / 2 + 'px';
             }
-            while ( $center.offsetWidth >  maxWidth) {
-                height--;
-                $gameBoard.style.height = height + 'px';
+            if (game) {
+                game.resize();
             }
         }
-        initAmblyotris({
+        game = initAmblyotris({
             baseElement: document.getElementById('game'),
             onInit: () => {
-                resizeAll();
                 setTimeout(() => {
                     document.querySelector('#telon').style.transition = 'all linear 500ms';
                     document.querySelector('#telon').style.opacity = 0;
+                    resizeAll();
                 }, 1000);
                 setTimeout(() => {
                     document.querySelector('#telon').style.display = 'none';
@@ -138,6 +187,7 @@
         document.querySelector('.btnFullScreen').addEventListener('click', toggleFullscreen);
         document.querySelector('.btnButtons').addEventListener('click', toggleControls);
         window.addEventListener('resize', resizeAll);
+        screen.orientation.addEventListener('change', resizeAll);
     </script>
 </body>
 </html>

@@ -3,7 +3,6 @@ import Game, { GameOptions } from './game';
 declare global {
 	interface Window {
 		initAmblyotris: (element: HTMLElement, options?: GameOptions) => void;
-		amblyotris: Game;
 	}
 }
 
@@ -15,6 +14,6 @@ if (window.initAmblyotris) {
 			console.error("Can't initialize Amblyotris. Element not found.");
 			return;
 		}
-		window.amblyotris = new Game(element, options);
+		return new Game(element, options);
 	};
 }

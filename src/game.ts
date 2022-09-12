@@ -81,6 +81,7 @@ class Game {
 	$btnSoundOff: HTMLElement[];
 	$btnSettings: HTMLElement[];
 	$divMenu: HTMLElement;
+	$divWelcome: HTMLElement;
 
 	$baseEl: HTMLElement;
 	$gameBoard: HTMLElement;
@@ -105,13 +106,26 @@ class Game {
 	constructor(options?: GameOptions);
 	constructor(baseEl: HTMLElement, options?: GameOptions);
 	constructor(baseElOrOptions: any, options?: GameOptions) {
-		const squareSize = Math.round(screen.width / 10);
+		let baseEl: HTMLElement;
+		let opts: GameOptions;
+		if (baseElOrOptions?.baseElement) {
+			baseEl = baseElOrOptions.baseElement;
+			opts = baseElOrOptions;
+		} else {
+			baseEl = baseElOrOptions;
+			opts = options;
+		}
+		// Use base element for default sizes
+		this.$baseEl = baseEl;
 		const cols = 10;
 		const rows = 20;
+		const height = this.$baseEl.clientHeight;
+		const width = height / 2;
+		const squareSize = height / rows;
 		// First color is for background, then blue, red and black
 		const colorAlternatives = [
 			['#FFFFFF', '#00fee8', '#ff5500', '#000000'],
-			['#81007f', '#04007d', '#800001', '#000000']
+			['#81007f', '#04007d', '#800001', '#FFFFFF']
 		];
 		// Current opacity of each color. Background opacity is not used.
 		const opacity = ['FF', 'FF', 'FF', 'FF'];
@@ -125,32 +139,52 @@ class Game {
 			cols,
 			rows,
 			squareSize,
-			width: squareSize * cols,
-			height: squareSize * rows
+			width,
+			height
 		};
-		let baseEl: HTMLElement;
-		let opts: GameOptions;
-		if (baseElOrOptions?.baseElement) {
-			baseEl = baseElOrOptions.baseElement;
-			opts = baseElOrOptions;
-		} else {
-			baseEl = baseElOrOptions;
-			opts = options;
-		}
-		this.$baseEl = baseEl;
 		this.options = { ...defaults, ...opts };
 		this.init();
 	}
 
 	/**
+	 * Resizes everything
+	 */
+	resize = (height?: number) => {
+		// If height is not defined, use $gameBoard size
+		height ??= this.$gameBoard.clientHeight;
+		this.options.height = height;
+		this.options.width = height / 2;
+		this.options.squareSize = height / this.options.rows;
+		this.$cnvBack.setAttribute('height', String(height));
+		this.$cnvBack.setAttribute('width', String(height / 2));
+		this.$cnvActive.setAttribute('height', String(height));
+		this.$cnvActive.setAttribute('width', String(height / 2));
+		this.$cnvStack.setAttribute('height', String(height));
+		this.$cnvStack.setAttribute('width', String(height / 2));
+		this.$cnvFront.setAttribute('height', String(height));
+		this.$cnvFront.setAttribute('width', String(height / 2));
+		this.$cnvMessage.setAttribute('height', String(height));
+		this.$cnvMessage.setAttribute('width', String(height / 2));
+		this.$cnvNext.setAttribute('width', String(this.options.squareSize * 5)); // One block padding + 4 blocks Width
+		this.$cnvNext.setAttribute('height', String(this.options.squareSize * 3)); // One block padding + 2 blocks height
+		this.$cnvSubNext.setAttribute('width', String(this.options.squareSize * 5)); // One block padding + 4 blocks Width
+		this.$cnvSubNext.setAttribute('height', String(this.options.squareSize * 3)); // One block padding + 2 blocks height
+		this.drawBack();
+		this.drawActive();
+		this.drawStack();
+		this.drawNext();
+	};
+
+	/**
 	 * Initializes game values
 	 */
 	init = () => {
-		this.showWelcome();
 		this.initDomElements();
 		this.initSounds();
 		this.resetGame();
+		this.resize();
 		this.initControls();
+		this.showWelcome();
 		if (this.options.onInit) {
 			this.options.onInit();
 		}
@@ -173,7 +207,7 @@ class Game {
 		this.restartGlobalXAndY();
 		this.refreshScore();
 		this.pauseGame();
-		this.drawBack(this.canvasBack);
+		this.drawBack();
 		this.drawStack();
 		this.drawActive();
 	};
@@ -182,9 +216,12 @@ class Game {
 	 * Shows welcome message
 	 */
 	showWelcome = () => {
-		Swal({ title: 'Bienvenido', text: 'Versión del Tetris para personas con ambliopía. Para usar con anteojos rojos/azules.', closeOnEsc: true }).then(() =>
-			this.resumeGame()
-		);
+		this.$divWelcome;
+		console.log('~ this.$divWelcome', this.$divWelcome);
+		if (this.$divWelcome) {
+			this.$divWelcome.style.display = 'block';
+			Swal({ content: { element: this.$divWelcome }, closeOnEsc: true }).then(() => this.resumeGame());
+		}
 	};
 
 	/**
@@ -634,18 +671,23 @@ class Game {
 	/**
 	 * Draws the background of the board
 	 */
-	drawBack = (canvasContext: CanvasRenderingContext2D, color?: string) => {
+	drawBack = (canvas?: HTMLCanvasElement, color?: string) => {
+		canvas ??= this.$cnvBack;
+		color ??= this.options.color[0];
+		canvas.style.background = color;
+		const canvasContext = canvas.getContext('2d');
 		this.clearCanvas(canvasContext);
-		canvasContext.fillStyle = color ?? this.options.color[0];
-		canvasContext.fill();
-		canvasContext.strokeStyle = '#CCCCCC33';
 		canvasContext.lineWidth = this.options.squareSize / 30;
 		for (let y = 0; y < this.options.rows; y++) {
-			for (let x = 0; x < this.options.cols; x++) {
-				canvasContext.fillRect(x * this.options.squareSize, y * this.options.squareSize, this.options.squareSize, this.options.squareSize);
-				canvasContext.strokeRect(x * this.options.squareSize, y * this.options.squareSize, this.options.squareSize, this.options.squareSize);
-			}
+			canvasContext.moveTo(0, y * this.options.squareSize);
+			canvasContext.lineTo(this.options.width, y * this.options.squareSize);
 		}
+		for (let x = 0; x < this.options.cols; x++) {
+			canvasContext.moveTo(x * this.options.squareSize, 0);
+			canvasContext.lineTo(x * this.options.squareSize, this.options.height);
+		}
+		canvasContext.strokeStyle = '#CCCCCC33';
+		canvasContext.stroke();
 	};
 
 	/**
@@ -822,39 +864,42 @@ class Game {
 		this.$btnSettings = Array.from(this.$baseEl.getElementsByClassName('btnSettings') as HTMLCollectionOf<HTMLElement>);
 		this.$btnMenu = Array.from(this.$baseEl.getElementsByClassName('btnMenu') as HTMLCollectionOf<HTMLElement>);
 		this.$divMenu = this.$baseEl.querySelector('.menu');
+		this.$divMenu.style.display = 'none';
+		this.$divWelcome = this.$baseEl.querySelector('.welcome');
+		this.$divWelcome.style.display = 'none';
 
 		this.$gameBoard = this.$baseEl.querySelector('.gameBoard');
 		if (!this.$gameBoard) {
-			console.error('An element with lcass gameBoard is mandatory to initialize.');
+			console.error('An element with class gameBoard is mandatory to initialize.');
 			return;
 		}
 		this.$gameBoard.style.position = 'relative';
 
 		// Creates canvases for board and current element falling
 		this.$cnvBack = document.createElement('canvas');
-		this.$cnvBack.setAttribute('width', this.options.width + 'px');
-		this.$cnvBack.setAttribute('height', this.options.height + 'px');
+		this.$cnvBack.setAttribute('width', String(this.options.width));
+		this.$cnvBack.setAttribute('height', String(this.options.height));
 		this.$cnvBack.style.zIndex = '0';
 		this.$cnvStack = document.createElement('canvas');
-		this.$cnvStack.setAttribute('width', this.options.width + 'px');
-		this.$cnvStack.setAttribute('height', this.options.height + 'px');
+		this.$cnvStack.setAttribute('width', String(this.options.width));
+		this.$cnvStack.setAttribute('height', String(this.options.height));
 		this.$cnvStack.style.position = 'absolute';
 		this.$cnvStack.style.zIndex = '1';
 		this.$cnvActive = document.createElement('canvas');
-		this.$cnvActive.setAttribute('width', this.options.width + 'px');
-		this.$cnvActive.setAttribute('height', this.options.height + 'px');
+		this.$cnvActive.setAttribute('width', String(this.options.width));
+		this.$cnvActive.setAttribute('height', String(this.options.height));
 		this.$cnvActive.style.position = 'absolute';
 		this.$cnvActive.style.zIndex = '2';
 
 		// Creates canvases for deleting animation and messages
 		this.$cnvFront = document.createElement('canvas');
-		this.$cnvFront.setAttribute('width', this.options.width + 'px');
-		this.$cnvFront.setAttribute('height', this.options.height + 'px');
+		this.$cnvFront.setAttribute('width', String(this.options.width));
+		this.$cnvFront.setAttribute('height', String(this.options.height));
 		this.$cnvFront.style.position = 'absolute';
 		this.$cnvFront.style.zIndex = '3';
 		this.$cnvMessage = document.createElement('canvas');
-		this.$cnvMessage.setAttribute('width', this.options.width + 'px');
-		this.$cnvMessage.setAttribute('height', this.options.height + 'px');
+		this.$cnvMessage.setAttribute('width', String(this.options.width));
+		this.$cnvMessage.setAttribute('height', String(this.options.height));
 		this.$cnvMessage.style.position = 'absolute';
 		this.$cnvMessage.style.zIndex = '4';
 		this.$cnvMessage.style.opacity = '0';
@@ -875,8 +920,8 @@ class Game {
 
 		// Creates canvas for next figure
 		this.$cnvNext = document.createElement('canvas');
-		this.$cnvNext.setAttribute('width', this.options.squareSize * 5 + 'px'); // One block padding + 4 blocks Width
-		this.$cnvNext.setAttribute('height', this.options.squareSize * 3 + 'px'); // One block padding + 2 blocks height
+		this.$cnvNext.setAttribute('width', String(this.options.squareSize * 5)); // One block padding + 4 blocks Width
+		this.$cnvNext.setAttribute('height', String(this.options.squareSize * 3)); // One block padding + 2 blocks height
 		this.$cnvNext.style.background = this.options.color[0];
 		this.canvasNext = this.$cnvNext.getContext('2d');
 		const nextFigure = this.$baseEl.getElementsByClassName('nextFigure');
@@ -886,8 +931,8 @@ class Game {
 		}
 		// Creates canvas for sub next figure
 		this.$cnvSubNext = document.createElement('canvas');
-		this.$cnvSubNext.setAttribute('width', this.options.squareSize * 5 + 'px'); // One block padding + 4 blocks Width
-		this.$cnvSubNext.setAttribute('height', this.options.squareSize * 3 + 'px'); // One block padding + 2 blocks height
+		this.$cnvSubNext.setAttribute('width', String(this.options.squareSize * 5)); // One block padding + 4 blocks Width
+		this.$cnvSubNext.setAttribute('height', String(this.options.squareSize * 3)); // One block padding + 2 blocks height
 		this.$cnvSubNext.style.background = this.options.color[0];
 		this.canvasSubNext = this.$cnvSubNext.getContext('2d');
 		const subNextFigure = this.$baseEl.getElementsByClassName('subNextFigure');
@@ -1157,6 +1202,7 @@ class Game {
 	 * Shows game menu
 	 */
 	showMenu = () => {
+		if (!this.$divMenu) return;
 		this.pauseGame();
 		this.$divMenu.style.display = 'block';
 		Swal({ content: { element: this.$divMenu }, buttons: {}, closeOnEsc: true }).finally(() => this.resumeGame());
@@ -1206,8 +1252,8 @@ class Game {
 					btn.style.border = offStyle;
 				}
 				const btnCanvas = document.createElement('canvas');
-				btnCanvas.setAttribute('width', this.options.squareSize * 7 + 'px');
-				btnCanvas.setAttribute('height', this.options.squareSize * 4 + 'px');
+				btnCanvas.setAttribute('width', String(this.options.squareSize * 7));
+				btnCanvas.setAttribute('height', String(this.options.squareSize * 4));
 				btnCanvas.style.display = 'block';
 				btnCanvas.style.width = '130px';
 				btnCanvas.style.height = 'auto';
@@ -1215,7 +1261,7 @@ class Game {
 				btnCanvas.style.border = '1px solid #CCCCCC';
 				btnCanvas.style.background = this.options.colorAlternatives[i][0];
 				const btnCanvasCtx = btnCanvas.getContext('2d');
-				this.drawBack(btnCanvasCtx, this.options.colorAlternatives[i][0]);
+				this.drawBack(btnCanvas, this.options.colorAlternatives[i][0]);
 				let exampleTetromino = newTetrominoT(this.options.variantAlternatives[i], this.options.colorAlternatives[i][1]).getPoints();
 				for (const point of exampleTetromino) {
 					point.x += 2;
@@ -1250,8 +1296,8 @@ class Game {
 					btn.style.border = offStyle;
 				}
 				const btnCanvas = document.createElement('canvas');
-				btnCanvas.setAttribute('width', this.options.squareSize * 4 + 'px');
-				btnCanvas.setAttribute('height', this.options.squareSize * 3 + 'px');
+				btnCanvas.setAttribute('width', String(this.options.squareSize * 4));
+				btnCanvas.setAttribute('height', String(this.options.squareSize * 3));
 				btnCanvas.style.display = 'block';
 				btnCanvas.style.width = '80px';
 				btnCanvas.style.height = 'auto';
@@ -1286,8 +1332,8 @@ class Game {
 						btn.style.border = offStyle;
 					}
 					const btnCanvas = document.createElement('canvas');
-					btnCanvas.setAttribute('width', this.options.squareSize * 3 + 'px');
-					btnCanvas.setAttribute('height', this.options.squareSize * 3 + 'px');
+					btnCanvas.setAttribute('width', String(this.options.squareSize * 3));
+					btnCanvas.setAttribute('height', String(this.options.squareSize * 3));
 					btnCanvas.style.display = 'block';
 					btnCanvas.style.width = '45px';
 					btnCanvas.style.height = 'auto';
@@ -1338,7 +1384,7 @@ class Game {
 					this.options.variant = newSettings.variant;
 					this.options.color = newSettings.color;
 					this.options.opacity = newSettings.opacity;
-					this.drawBack(this.canvasBack);
+					this.drawBack();
 					if (this.$cnvNext) {
 						this.$cnvNext.style.background = this.options.color[0];
 						this.$cnvSubNext.style.background = this.options.color[0];
@@ -1346,6 +1392,7 @@ class Game {
 					this.chooseRandomFigure();
 					this.chooseRandomFigure();
 					this.chooseRandomFigure();
+					this.restartGlobalXAndY();
 				}
 				this.resumeGame();
 			});
