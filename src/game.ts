@@ -77,12 +77,15 @@ class Game {
 	$txtLevel: HTMLElement[];
 	$btnReset: HTMLElement[];
 	$btnMenu: HTMLElement[];
+	$btnCalibration: HTMLElement[];
 	$btnSoundOn: HTMLElement[];
 	$btnSoundOff: HTMLElement[];
 	$btnSettings: HTMLElement[];
 	$divMenu: HTMLElement;
 	$divWelcome: HTMLElement;
 	$divReset: HTMLElement;
+	$divSettings: HTMLElement;
+	$divCalibration: HTMLElement;
 
 	$baseEl: HTMLElement;
 	$gameBoard: HTMLElement;
@@ -288,6 +291,11 @@ class Game {
 		this.$btnMenu?.forEach((btn) =>
 			btn.addEventListener('click', () => {
 				this.showMenu();
+			})
+		);
+		this.$btnCalibration?.forEach((btn) =>
+			btn.addEventListener('click', () => {
+				this.showCalibration();
 			})
 		);
 		this.$btnSoundOn?.forEach((btn) =>
@@ -864,6 +872,7 @@ class Game {
 		this.$btnSoundOff = Array.from(this.$baseEl.getElementsByClassName('btnSoundOff') as HTMLCollectionOf<HTMLElement>);
 		this.$btnSettings = Array.from(this.$baseEl.getElementsByClassName('btnSettings') as HTMLCollectionOf<HTMLElement>);
 		this.$btnMenu = Array.from(this.$baseEl.getElementsByClassName('btnMenu') as HTMLCollectionOf<HTMLElement>);
+		this.$btnCalibration = Array.from(this.$baseEl.getElementsByClassName('btnCalibration') as HTMLCollectionOf<HTMLElement>);
 		this.$divMenu = this.$baseEl.querySelector('.menuScreen');
 		if (this.$divMenu) {
 			this.$divMenu.style.display = 'none';
@@ -875,6 +884,14 @@ class Game {
 		this.$divReset = this.$baseEl.querySelector('.resetScreen');
 		if (this.$divReset) {
 			this.$divReset.style.display = 'none';
+		}
+		this.$divSettings = this.$baseEl.querySelector('.settingsScreen');
+		if (this.$divSettings) {
+			this.$divSettings.style.display = 'none';
+		}
+		this.$divCalibration = this.$baseEl.querySelector('.calibrationScreen');
+		if (this.$divCalibration) {
+			this.$divCalibration.style.display = 'none';
 		}
 
 		this.$gameBoard = this.$baseEl.querySelector('.gameBoard');
@@ -1329,6 +1346,217 @@ class Game {
 				btnCanvas.style.borderRadius = '6px';
 				btnCanvas.style.background = '#EEEEEE';
 				btnCanvas.style.border = '1px solid transparent';
+				const exampleTetromino = newTetrominoT(this.options.variantAlternatives[i], '#444444').getPoints();
+				const btnCanvasCtx = btnCanvas.getContext('2d');
+				for (const point of exampleTetromino) {
+					point.x += 1.5;
+					point.y += 1.5;
+					this.drawPoint(btnCanvasCtx, point);
+				}
+				btn.appendChild(btnCanvas);
+				btn.addEventListener('click', () => {
+					newSettings.variant = this.options.variantAlternatives[i];
+					btnVar.forEach((b) => (b.style.border = offStyle));
+					btn.style.border = onStyle;
+				});
+				settingsContentVariant.appendChild(btn);
+				return btn;
+			});
+			const btnOpac = [0, 1].map((j) =>
+				['FF', 'CC', '99', '66', '33'].map((i) => {
+					const btn = document.createElement('button');
+					btn.style.borderRadius = '10px';
+					btn.style.background = 'transparent';
+					btn.style.padding = '5px';
+					if (newSettings.opacity[j + 1] === i) {
+						btn.style.border = onStyle;
+					} else {
+						btn.style.border = offStyle;
+					}
+					const btnCanvas = document.createElement('canvas');
+					btnCanvas.setAttribute('width', String(this.options.squareSize * 3));
+					btnCanvas.setAttribute('height', String(this.options.squareSize * 3));
+					btnCanvas.style.display = 'block';
+					btnCanvas.style.width = '43px';
+					btnCanvas.style.height = 'auto';
+					btnCanvas.style.borderRadius = '6px';
+					btnCanvas.style.background = '#EEEEEE';
+					btnCanvas.style.border = '1px solid transparent';
+					const color = (j === 0 ? '#0000FF' : j === 1 ? '#FF0000' : '#000000') + i;
+					const exampleTetromino = newTetrominoO('fullColor', color).getPoints();
+					const btnCanvasCtx = btnCanvas.getContext('2d');
+					for (const point of exampleTetromino) {
+						point.x += 0.5;
+						point.y += 1.5;
+						this.drawPoint(btnCanvasCtx, point);
+					}
+					btn.appendChild(btnCanvas);
+					btn.addEventListener('click', () => {
+						newSettings.opacity[j + 1] = i;
+						btnOpac[j].forEach((b) => (b.style.border = offStyle));
+						btn.style.border = onStyle;
+					});
+					settingsContentOpacity[j].appendChild(btn);
+					return btn;
+				})
+			);
+
+			['100', '80', '60', '40', '20'].forEach((num) => {
+				const porc = document.createElement('div');
+				porc.textContent = num;
+				porc.style.width = '57px';
+				porc.style.fontSize = '14px';
+				porc.style.fontWeight = '700';
+				porc.style.color = '#444444';
+				settingsContentOpacityPorc.appendChild(porc);
+			});
+
+			settingsContent.appendChild(settingsContentBackground);
+			settingsContent.appendChild(settingsContentVariant);
+			settingsContent.appendChild(settingsContentOpacity[0]);
+			settingsContent.appendChild(settingsContentOpacityPorc);
+			settingsContent.appendChild(settingsContentOpacity[1]);
+
+			// Texts
+			let title = 'Game Settings';
+			if (this.$divSettings) {
+				title = this.$divSettings.querySelector('h2').textContent;
+			}
+
+			Swal({
+				title,
+				content: { element: settingsContent },
+				closeOnEsc: true,
+				buttons: {
+					cancel: {
+						text: 'Cancelar',
+						value: null,
+						visible: true
+					},
+					confirm: {
+						text: 'Aceptar',
+						value: true
+					}
+				}
+			}).then((val) => {
+				if (val) {
+					this.options.variant = newSettings.variant;
+					this.options.color = newSettings.color;
+					this.options.opacity = newSettings.opacity;
+					this.drawBack();
+					if (this.$cnvNext) {
+						this.$cnvNext.style.background = this.options.color[0];
+						this.$cnvSubNext.style.background = this.options.color[0];
+					}
+					this.chooseRandomFigure();
+					this.chooseRandomFigure();
+					this.chooseRandomFigure();
+					this.restartGlobalXAndY();
+				}
+				this.resumeGame();
+			});
+		});
+	};
+
+	/**
+	 * Shows calibration menu
+	 */
+	showCalibration = () => {
+		// If settings menu is opened from game menu, a minimum difference
+		// in time is necessary for this modal open after menu's closes
+		setTimeout(() => {
+			this.pauseGame();
+			const newSettings = {
+				color: this.options.color,
+				variant: this.options.variant,
+				opacity: this.options.opacity
+			};
+			const settingsContent = document.createElement('div');
+			const settingsContentBackground = document.createElement('div');
+			const settingsContentVariant = document.createElement('div');
+			const settingsContentOpacity = [document.createElement('div'), document.createElement('div')];
+			const settingsContentOpacityPorc = document.createElement('div');
+			settingsContent.style.display = 'flex';
+			settingsContent.style.flexDirection = 'column';
+			settingsContent.style.gap = '10px';
+			settingsContentBackground.style.display = 'flex';
+			settingsContentBackground.style.justifyContent = 'space-around';
+			settingsContentVariant.style.display = 'flex';
+			settingsContentVariant.style.justifyContent = 'space-around';
+			settingsContentOpacity[0].style.display = 'flex';
+			settingsContentOpacity[0].style.justifyContent = 'space-around';
+			settingsContentOpacity[1].style.display = 'flex';
+			settingsContentOpacity[1].style.justifyContent = 'space-around';
+			settingsContentOpacityPorc.style.display = 'flex';
+			settingsContentOpacityPorc.style.margin = '-5px 0';
+			settingsContentOpacityPorc.style.justifyContent = 'space-around';
+
+			const offStyle = '2px solid transparent';
+			const onStyle = '2px solid #AAAAAA';
+
+			const btnBack = this.options.colorAlternatives.map((colors, i) => {
+				const btn = document.createElement('button');
+				btn.style.borderRadius = '10px';
+				btn.style.background = 'transparent';
+				btn.style.padding = '5px';
+				if (newSettings.color === colors) {
+					btn.style.border = onStyle;
+				} else {
+					btn.style.border = offStyle;
+				}
+				const btnCanvas = document.createElement('canvas');
+				btnCanvas.setAttribute('width', String(this.options.squareSize * 7));
+				btnCanvas.setAttribute('height', String(this.options.squareSize * 4));
+				btnCanvas.style.display = 'block';
+				btnCanvas.style.width = '130px';
+				btnCanvas.style.height = 'auto';
+				btnCanvas.style.borderRadius = '6px';
+				btnCanvas.style.border = '1px solid #CCCCCC';
+				btnCanvas.style.background = colors[0];
+				const btnCanvasCtx = btnCanvas.getContext('2d');
+				this.drawBack(btnCanvas, colors[0]);
+				let exampleTetromino = newTetrominoT(this.options.variantAlternatives[i], colors[1]).getPoints();
+				for (const point of exampleTetromino) {
+					point.x += 2;
+					point.y += 2;
+					point.variant = 'fullColor';
+					this.drawPoint(btnCanvasCtx, point);
+				}
+				exampleTetromino = newTetrominoZ(this.options.variantAlternatives[i], colors[2]).getPoints();
+				for (const point of exampleTetromino) {
+					point.x += 4;
+					point.y += 2;
+					point.variant = 'fullColor';
+					this.drawPoint(btnCanvasCtx, point);
+				}
+				btn.appendChild(btnCanvas);
+				btn.addEventListener('click', () => {
+					newSettings.color = colors;
+					btnBack.forEach((b) => (b.style.border = offStyle));
+					btn.style.border = onStyle;
+				});
+				settingsContentBackground.appendChild(btn);
+				return btn;
+			});
+			const btnVar = [0, 1, 2].map((i) => {
+				const btn = document.createElement('button');
+				btn.style.borderRadius = '10px';
+				btn.style.background = 'transparent';
+				btn.style.padding = '5px';
+				if (newSettings.variant === this.options.variantAlternatives[i]) {
+					btn.style.border = onStyle;
+				} else {
+					btn.style.border = offStyle;
+				}
+				const btnCanvas = document.createElement('canvas');
+				btnCanvas.setAttribute('width', String(this.options.squareSize * 4));
+				btnCanvas.setAttribute('height', String(this.options.squareSize * 3));
+				btnCanvas.style.display = 'block';
+				btnCanvas.style.width = '80px';
+				btnCanvas.style.height = 'auto';
+				btnCanvas.style.borderRadius = '6px';
+				btnCanvas.style.background = '#EEEEEE';
+				btnCanvas.style.border = '1px solid transparent';
 				const exampleTetromino = newTetrominoT(this.options.variantAlternatives[i], '#000000').getPoints();
 				const btnCanvasCtx = btnCanvas.getContext('2d');
 				for (const point of exampleTetromino) {
@@ -1399,8 +1627,14 @@ class Game {
 			settingsContent.appendChild(settingsContentOpacityPorc);
 			settingsContent.appendChild(settingsContentOpacity[1]);
 
+			// Texts
+			let title = 'Color Calibration';
+			if (this.$divCalibration) {
+				title = this.$divCalibration.querySelector('h2').textContent;
+			}
+
 			Swal({
-				title: 'Configuraciones',
+				title,
 				content: { element: settingsContent },
 				closeOnEsc: true,
 				buttons: {
