@@ -40,7 +40,7 @@
         </div>
     </div>
     <div id="game">
-        <div class="welcome">
+        <div class="welcomeScreen">
             <h2>¡Bienvenidos!</h2>
             <p>
                 Esta es una versión del Tetris para personas con ambliopía, preparada para ser usada con anteojos, sobre de los que ya usa, pero con vidrios de color rojo y azul/cian (anáglifos).
@@ -62,10 +62,19 @@
                 El código fuente de este juego puede encontrarse en <a href="https://github.com/Guiladg/amblyotris" style="white-space: nowrap;"><i class="fab fa-github"></i> GitHub</a>.
             </p>
         </div>
-        <ul class="menu">
+        <div class="resetScreen">
+            <h2>Reiniciar</h2>
+            <p>
+                ¿Terminar el juego actual e iniciar uno nuevo desde el principio?
+            </p>
+            <span class="no">No</span>
+            <span class="yes">Sí</span>
+        </div>
+        <ul class="menuScreen">
             <li><button class="btnPlay" tabindex="-1">Continuar juego</button></li>
             <li><button class="btnReset" tabindex="-1">Reiniciar juego</button></li>
             <li><button class="btnSettings" tabindex="-1">Configurar juego</button></li>
+            <li><button class="btnSettings" tabindex="-1">Calibrar colores</button></li>
             <li><button class="btnSoundOn" tabindex="-1">Activar sonidos</button></li>
             <li><button class="btnSoundOff" tabindex="-1">Silenciar sonidos</button></li>
             <li><button class="btnFullScreen" tabindex="-1">Ver en pantalla completa</button></li>
@@ -173,6 +182,11 @@
         }
         game = initAmblyotris({
             baseElement: document.getElementById('game'),
+            texts: {
+                restart: 'Reiniciar',
+                yes: 'Sí',
+                no: 'No'
+            },
             onInit: () => {
                 setTimeout(() => {
                     document.querySelector('#telon').style.transition = 'all linear 500ms';

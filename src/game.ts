@@ -82,6 +82,7 @@ class Game {
 	$btnSettings: HTMLElement[];
 	$divMenu: HTMLElement;
 	$divWelcome: HTMLElement;
+	$divReset: HTMLElement;
 
 	$baseEl: HTMLElement;
 	$gameBoard: HTMLElement;
@@ -122,10 +123,10 @@ class Game {
 		const height = this.$baseEl.clientHeight;
 		const width = height / 2;
 		const squareSize = height / rows;
-		// First color is for background, then blue, red and black
+		// First color is for background, then blue, red and grey
 		const colorAlternatives = [
-			['#FFFFFF', '#00fee8', '#ff5500', '#000000'],
-			['#81007f', '#04007d', '#800001', '#FFFFFF']
+			['#FFFFFF', '#00fee8', '#ff8015', '#969696'],
+			['#81007f', '#04007d', '#800000', '#afafaf']
 		];
 		// Current opacity of each color. Background opacity is not used.
 		const opacity = ['FF', 'FF', 'FF', 'FF'];
@@ -217,7 +218,6 @@ class Game {
 	 */
 	showWelcome = () => {
 		this.$divWelcome;
-		console.log('~ this.$divWelcome', this.$divWelcome);
 		if (this.$divWelcome) {
 			this.$divWelcome.style.display = 'block';
 			Swal({ content: { element: this.$divWelcome }, closeOnEsc: true }).then(() => this.resumeGame());
@@ -448,6 +448,7 @@ class Game {
 		for (const point of this.currentFigure.getPoints()) {
 			point.x += this.globalX;
 			point.y += this.globalY;
+			point.color = this.options.color[3];
 			this.existingPieces[point.y][point.x] = {
 				taken: true,
 				...point
@@ -863,10 +864,18 @@ class Game {
 		this.$btnSoundOff = Array.from(this.$baseEl.getElementsByClassName('btnSoundOff') as HTMLCollectionOf<HTMLElement>);
 		this.$btnSettings = Array.from(this.$baseEl.getElementsByClassName('btnSettings') as HTMLCollectionOf<HTMLElement>);
 		this.$btnMenu = Array.from(this.$baseEl.getElementsByClassName('btnMenu') as HTMLCollectionOf<HTMLElement>);
-		this.$divMenu = this.$baseEl.querySelector('.menu');
-		this.$divMenu.style.display = 'none';
-		this.$divWelcome = this.$baseEl.querySelector('.welcome');
-		this.$divWelcome.style.display = 'none';
+		this.$divMenu = this.$baseEl.querySelector('.menuScreen');
+		if (this.$divMenu) {
+			this.$divMenu.style.display = 'none';
+		}
+		this.$divWelcome = this.$baseEl.querySelector('.welcomeScreen');
+		if (this.$divWelcome) {
+			this.$divWelcome.style.display = 'none';
+		}
+		this.$divReset = this.$baseEl.querySelector('.resetScreen');
+		if (this.$divReset) {
+			this.$divReset.style.display = 'none';
+		}
 
 		this.$gameBoard = this.$baseEl.querySelector('.gameBoard');
 		if (!this.$gameBoard) {
@@ -962,7 +971,9 @@ class Game {
 		let randomFigure: Tetromino;
 		const randomOption = Utils.getRandomNumberInRange(1, 7);
 		// this.options.color[0] is bg, then figures
-		const randomColor = Utils.getRandomNumberInRange(1, 3);
+		let randomColor = Utils.getRandomNumberInRange(1, 5);
+		// 4 and 5 are red and blue again, for proportion purposes
+		if (randomColor > 3) randomColor -= 2;
 		const color = this.options.color[randomColor] + this.options.opacity[randomColor];
 		const variant = this.options.variant;
 		switch (randomOption) {
@@ -1169,23 +1180,34 @@ class Game {
 	 * Confirms restart game
 	 */
 	askUserConfirmResetGame = () => {
+		// Texts
+		let title = 'Restart';
+		let text = 'Do you want to end this game and start a new one?';
+		let no = 'No';
+		let yes = 'Yes';
+		if (this.$divReset) {
+			title = this.$divReset.querySelector('h2').textContent;
+			text = this.$divReset.querySelector('p').textContent;
+			no = this.$divReset.querySelector('.no').textContent;
+			yes = this.$divReset.querySelector('.yes').textContent;
+		}
 		// If restart game alert is opened from game menu, a minimum difference
 		// in time is necessary for this modal open after menu's closes
 		setTimeout(() => {
 			this.pauseGame();
 			Swal({
-				title: 'Reiniciar',
-				text: '¿Terminar el juego actual e iniciar uno nuevo desde el principio?',
+				title,
+				text,
 				closeOnEsc: true,
 				dangerMode: true,
 				buttons: {
 					cancel: {
-						text: 'No',
+						text: no,
 						value: null,
 						visible: true
 					},
 					confirm: {
-						text: 'Sí',
+						text: yes,
 						value: true
 					}
 				}
@@ -1225,10 +1247,10 @@ class Game {
 			const settingsContentBackground = document.createElement('div');
 			const settingsContentVariant = document.createElement('div');
 			const settingsContentOpacity = [document.createElement('div'), document.createElement('div')];
+			const settingsContentOpacityPorc = document.createElement('div');
 			settingsContent.style.display = 'flex';
 			settingsContent.style.flexDirection = 'column';
 			settingsContent.style.gap = '10px';
-			settingsContent.style.margin = '20px';
 			settingsContentBackground.style.display = 'flex';
 			settingsContentBackground.style.justifyContent = 'space-around';
 			settingsContentVariant.style.display = 'flex';
@@ -1237,16 +1259,19 @@ class Game {
 			settingsContentOpacity[0].style.justifyContent = 'space-around';
 			settingsContentOpacity[1].style.display = 'flex';
 			settingsContentOpacity[1].style.justifyContent = 'space-around';
+			settingsContentOpacityPorc.style.display = 'flex';
+			settingsContentOpacityPorc.style.margin = '-5px 0';
+			settingsContentOpacityPorc.style.justifyContent = 'space-around';
 
 			const offStyle = '2px solid transparent';
 			const onStyle = '2px solid #AAAAAA';
 
-			const btnBack = [0, 1].map((i) => {
+			const btnBack = this.options.colorAlternatives.map((colors, i) => {
 				const btn = document.createElement('button');
 				btn.style.borderRadius = '10px';
 				btn.style.background = 'transparent';
 				btn.style.padding = '5px';
-				if (newSettings.color === this.options.colorAlternatives[i]) {
+				if (newSettings.color === colors) {
 					btn.style.border = onStyle;
 				} else {
 					btn.style.border = offStyle;
@@ -1259,17 +1284,17 @@ class Game {
 				btnCanvas.style.height = 'auto';
 				btnCanvas.style.borderRadius = '6px';
 				btnCanvas.style.border = '1px solid #CCCCCC';
-				btnCanvas.style.background = this.options.colorAlternatives[i][0];
+				btnCanvas.style.background = colors[0];
 				const btnCanvasCtx = btnCanvas.getContext('2d');
-				this.drawBack(btnCanvas, this.options.colorAlternatives[i][0]);
-				let exampleTetromino = newTetrominoT(this.options.variantAlternatives[i], this.options.colorAlternatives[i][1]).getPoints();
+				this.drawBack(btnCanvas, colors[0]);
+				let exampleTetromino = newTetrominoT(this.options.variantAlternatives[i], colors[1]).getPoints();
 				for (const point of exampleTetromino) {
 					point.x += 2;
 					point.y += 2;
 					point.variant = 'fullColor';
 					this.drawPoint(btnCanvasCtx, point);
 				}
-				exampleTetromino = newTetrominoZ(this.options.variantAlternatives[i], this.options.colorAlternatives[i][2]).getPoints();
+				exampleTetromino = newTetrominoZ(this.options.variantAlternatives[i], colors[2]).getPoints();
 				for (const point of exampleTetromino) {
 					point.x += 4;
 					point.y += 2;
@@ -1278,7 +1303,7 @@ class Game {
 				}
 				btn.appendChild(btnCanvas);
 				btn.addEventListener('click', () => {
-					newSettings.color = this.options.colorAlternatives[i];
+					newSettings.color = colors;
 					btnBack.forEach((b) => (b.style.border = offStyle));
 					btn.style.border = onStyle;
 				});
@@ -1359,9 +1384,19 @@ class Game {
 				})
 			);
 
+			['100', '80', '60', '40', '20'].forEach((num) => {
+				const porc = document.createElement('div');
+				porc.textContent = num;
+				porc.style.width = '59px';
+				porc.style.fontSize = '14px';
+				porc.style.fontWeight = '700';
+				settingsContentOpacityPorc.appendChild(porc);
+			});
+
 			settingsContent.appendChild(settingsContentBackground);
 			settingsContent.appendChild(settingsContentVariant);
 			settingsContent.appendChild(settingsContentOpacity[0]);
+			settingsContent.appendChild(settingsContentOpacityPorc);
 			settingsContent.appendChild(settingsContentOpacity[1]);
 
 			Swal({
