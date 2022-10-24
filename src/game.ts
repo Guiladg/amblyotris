@@ -128,8 +128,9 @@ class Game {
 		const squareSize = height / rows;
 		// First color is for background, then blue, red and grey
 		const colorAlternatives = [
-			['#FFFFFF', '#00fee8', '#ff8015', '#969696'],
+			['#FFFFFF', '#00ffff', '#ff0000', '#969696'],
 			['#81007f', '#04007d', '#800000', '#afafaf']
+			//['#FFFFFF', '#00fee8', '#ff8015', '#969696'],
 		];
 		// Current opacity of each color. Background opacity is not used.
 		const opacity = ['FF', 'FF', 'FF', 'FF'];
@@ -147,6 +148,7 @@ class Game {
 			height
 		};
 		this.options = { ...defaults, ...opts };
+		//Start
 		this.init();
 	}
 
@@ -220,7 +222,6 @@ class Game {
 	 * Shows welcome message
 	 */
 	showWelcome = () => {
-		this.$divWelcome;
 		if (this.$divWelcome) {
 			this.$divWelcome.style.display = 'block';
 			Swal({ content: { element: this.$divWelcome }, closeOnEsc: true }).then(() => this.resumeGame());
@@ -619,6 +620,9 @@ class Game {
 		}
 	};
 
+	/**
+	 * Makes everything moving
+	 */
 	mainLoop = () => {
 		if (!this.canPlay) {
 			return;
@@ -649,6 +653,9 @@ class Game {
 		}
 	};
 
+	/**
+	 * Process after the figure reaches the end
+	 */
 	endFallingProcess = () => {
 		if (!this.sounds.mute) {
 			this.sounds.tap.pause();
@@ -1466,166 +1473,112 @@ class Game {
 		// in time is necessary for this modal open after menu's closes
 		setTimeout(() => {
 			this.pauseGame();
-			const newSettings = {
-				color: this.options.color,
-				variant: this.options.variant,
-				opacity: this.options.opacity
+			const newCalibrations = this.options.colorAlternatives[0];
+
+			const calibrationContent = document.createElement('div');
+			const calibrationContentRed = document.createElement('div');
+			const calibrationContentBlue = document.createElement('div');
+			const calibrationContentWhite = document.createElement('div');
+			const calibrationContentGlasses = document.createElement('div');
+			calibrationContent.style.display = 'flex';
+			calibrationContent.style.gap = '20px';
+			calibrationContent.style.flexDirection = 'column';
+			calibrationContent.style.justifyContent = 'space-evenly';
+			calibrationContentRed.style.display = 'flex';
+			calibrationContentRed.style.gap = '10px';
+			calibrationContentRed.style.justifyContent = 'center';
+			calibrationContentRed.style.alignItems = 'center';
+			calibrationContentRed.innerHTML = '<i class="fas fa-crow"></i>';
+			calibrationContentBlue.style.display = 'flex';
+			calibrationContentBlue.style.gap = '10px';
+			calibrationContentBlue.style.justifyContent = 'center';
+			calibrationContentBlue.style.alignItems = 'center';
+			calibrationContentBlue.innerHTML = '<i class="fas fa-dove"></i>';
+			calibrationContentWhite.style.display = 'flex';
+			calibrationContentWhite.style.gap = '10px';
+			calibrationContentWhite.style.justifyContent = 'center';
+			calibrationContentWhite.innerHTML = '<i class="fas fa-circle"></i>';
+			calibrationContentWhite.style.alignItems = 'center';
+			calibrationContentGlasses.style.display = 'flex';
+			calibrationContentGlasses.style.gap = '-5px';
+			calibrationContentGlasses.style.justifyContent = 'center';
+
+			const divLeftEye = document.createElement('div');
+			const divMiddle = document.createElement('div');
+			const divRightEye = document.createElement('div');
+			const update = () => {
+				const whitePart = Number(btnWhite.value).toString(16).padStart(2, '0');
+				newCalibrations[0] = '#' + whitePart + whitePart + whitePart;
+				newCalibrations[1] = '#00FF' + Number(btnBlue.value).toString(16).padStart(2, '0');
+				newCalibrations[2] = '#FF' + Number(btnRed.value).toString(16).padStart(2, '0') + '00';
+				divLeftEye.style.background = newCalibrations[0];
+				divLeftEye.style.color = newCalibrations[1];
+				divRightEye.style.background = newCalibrations[0];
+				divRightEye.style.color = newCalibrations[2];
 			};
-			const settingsContent = document.createElement('div');
-			const settingsContentBackground = document.createElement('div');
-			const settingsContentVariant = document.createElement('div');
-			const settingsContentOpacity = [document.createElement('div'), document.createElement('div')];
-			const settingsContentOpacityPorc = document.createElement('div');
-			settingsContent.style.display = 'flex';
-			settingsContent.style.flexDirection = 'column';
-			settingsContent.style.gap = '10px';
-			settingsContentBackground.style.display = 'flex';
-			settingsContentBackground.style.justifyContent = 'space-around';
-			settingsContentVariant.style.display = 'flex';
-			settingsContentVariant.style.justifyContent = 'space-around';
-			settingsContentOpacity[0].style.display = 'flex';
-			settingsContentOpacity[0].style.justifyContent = 'space-around';
-			settingsContentOpacity[1].style.display = 'flex';
-			settingsContentOpacity[1].style.justifyContent = 'space-around';
-			settingsContentOpacityPorc.style.display = 'flex';
-			settingsContentOpacityPorc.style.margin = '-5px 0';
-			settingsContentOpacityPorc.style.justifyContent = 'space-around';
 
-			const offStyle = '2px solid transparent';
-			const onStyle = '2px solid #AAAAAA';
+			divLeftEye.style.borderRadius = '47%';
+			divLeftEye.style.width = '100px';
+			divLeftEye.style.height = '70px';
+			divLeftEye.style.border = '5px solid black';
+			divLeftEye.style.display = 'flex';
+			divLeftEye.style.justifyContent = 'center';
+			divLeftEye.style.alignItems = 'center';
+			divLeftEye.innerHTML = '<i class="fas fa-2x fa-dove"></i>';
+			divMiddle.style.width = '30px';
+			divMiddle.style.height = '20px';
+			divMiddle.style.border = '5px solid black';
+			divMiddle.style.borderBottom = 'none';
+			divMiddle.style.borderTopLeftRadius = '50%';
+			divMiddle.style.borderTopRightRadius = '50%';
+			divMiddle.style.margin = '15px -5px';
+			divRightEye.style.borderRadius = '47%';
+			divRightEye.style.width = '100px';
+			divRightEye.style.height = '70px';
+			divRightEye.style.border = '5px solid black';
+			divRightEye.innerHTML = '<i class="fas fa-2x fa-crow"></i>';
+			divRightEye.style.display = 'flex';
+			divRightEye.style.justifyContent = 'center';
+			divRightEye.style.alignItems = 'center';
+			calibrationContentGlasses.appendChild(divLeftEye);
+			calibrationContentGlasses.appendChild(divMiddle);
+			calibrationContentGlasses.appendChild(divRightEye);
 
-			const btnBack = this.options.colorAlternatives.map((colors, i) => {
-				const btn = document.createElement('button');
-				btn.style.borderRadius = '10px';
-				btn.style.background = 'transparent';
-				btn.style.padding = '5px';
-				if (newSettings.color === colors) {
-					btn.style.border = onStyle;
-				} else {
-					btn.style.border = offStyle;
-				}
-				const btnCanvas = document.createElement('canvas');
-				btnCanvas.setAttribute('width', String(this.options.squareSize * 7));
-				btnCanvas.setAttribute('height', String(this.options.squareSize * 4));
-				btnCanvas.style.display = 'block';
-				btnCanvas.style.width = '130px';
-				btnCanvas.style.height = 'auto';
-				btnCanvas.style.borderRadius = '6px';
-				btnCanvas.style.border = '1px solid #CCCCCC';
-				btnCanvas.style.background = colors[0];
-				const btnCanvasCtx = btnCanvas.getContext('2d');
-				this.drawBack(btnCanvas, colors[0]);
-				let exampleTetromino = newTetrominoT(this.options.variantAlternatives[i], colors[1]).getPoints();
-				for (const point of exampleTetromino) {
-					point.x += 2;
-					point.y += 2;
-					point.variant = 'fullColor';
-					this.drawPoint(btnCanvasCtx, point);
-				}
-				exampleTetromino = newTetrominoZ(this.options.variantAlternatives[i], colors[2]).getPoints();
-				for (const point of exampleTetromino) {
-					point.x += 4;
-					point.y += 2;
-					point.variant = 'fullColor';
-					this.drawPoint(btnCanvasCtx, point);
-				}
-				btn.appendChild(btnCanvas);
-				btn.addEventListener('click', () => {
-					newSettings.color = colors;
-					btnBack.forEach((b) => (b.style.border = offStyle));
-					btn.style.border = onStyle;
-				});
-				settingsContentBackground.appendChild(btn);
-				return btn;
-			});
-			const btnVar = [0, 1, 2].map((i) => {
-				const btn = document.createElement('button');
-				btn.style.borderRadius = '10px';
-				btn.style.background = 'transparent';
-				btn.style.padding = '5px';
-				if (newSettings.variant === this.options.variantAlternatives[i]) {
-					btn.style.border = onStyle;
-				} else {
-					btn.style.border = offStyle;
-				}
-				const btnCanvas = document.createElement('canvas');
-				btnCanvas.setAttribute('width', String(this.options.squareSize * 4));
-				btnCanvas.setAttribute('height', String(this.options.squareSize * 3));
-				btnCanvas.style.display = 'block';
-				btnCanvas.style.width = '80px';
-				btnCanvas.style.height = 'auto';
-				btnCanvas.style.borderRadius = '6px';
-				btnCanvas.style.background = '#EEEEEE';
-				btnCanvas.style.border = '1px solid transparent';
-				const exampleTetromino = newTetrominoT(this.options.variantAlternatives[i], '#000000').getPoints();
-				const btnCanvasCtx = btnCanvas.getContext('2d');
-				for (const point of exampleTetromino) {
-					point.x += 1.5;
-					point.y += 1.5;
-					this.drawPoint(btnCanvasCtx, point);
-				}
-				btn.appendChild(btnCanvas);
-				btn.addEventListener('click', () => {
-					newSettings.variant = this.options.variantAlternatives[i];
-					btnVar.forEach((b) => (b.style.border = offStyle));
-					btn.style.border = onStyle;
-				});
-				settingsContentVariant.appendChild(btn);
-				return btn;
-			});
-			const btnOpac = [0, 1].map((j) =>
-				['FF', 'CC', '99', '66', '33'].map((i) => {
-					const btn = document.createElement('button');
-					btn.style.borderRadius = '10px';
-					btn.style.background = 'transparent';
-					btn.style.padding = '5px';
-					if (newSettings.opacity[j + 1] === i) {
-						btn.style.border = onStyle;
-					} else {
-						btn.style.border = offStyle;
-					}
-					const btnCanvas = document.createElement('canvas');
-					btnCanvas.setAttribute('width', String(this.options.squareSize * 3));
-					btnCanvas.setAttribute('height', String(this.options.squareSize * 3));
-					btnCanvas.style.display = 'block';
-					btnCanvas.style.width = '45px';
-					btnCanvas.style.height = 'auto';
-					btnCanvas.style.borderRadius = '6px';
-					btnCanvas.style.background = '#EEEEEE';
-					btnCanvas.style.border = '1px solid transparent';
-					const color = (j === 0 ? '#0000FF' : j === 1 ? '#FF0000' : '#000000') + i;
-					const exampleTetromino = newTetrominoO('fullColor', color).getPoints();
-					const btnCanvasCtx = btnCanvas.getContext('2d');
-					for (const point of exampleTetromino) {
-						point.x += 0.5;
-						point.y += 1.5;
-						this.drawPoint(btnCanvasCtx, point);
-					}
-					btn.appendChild(btnCanvas);
-					btn.addEventListener('click', () => {
-						newSettings.opacity[j + 1] = i;
-						btnOpac[j].forEach((b) => (b.style.border = offStyle));
-						btn.style.border = onStyle;
-					});
-					settingsContentOpacity[j].appendChild(btn);
-					return btn;
-				})
-			);
+			const btnRed = document.createElement('input');
+			const btnBlue = document.createElement('input');
+			const btnWhite = document.createElement('input');
+			btnRed.type = 'range';
+			btnBlue.type = 'range';
+			btnWhite.type = 'range';
+			btnRed.style.width = '70%';
+			btnBlue.style.width = '70%';
+			btnWhite.style.width = '70%';
+			btnRed.onchange = update;
+			btnBlue.onchange = update;
+			btnWhite.onchange = update;
+			btnRed.oninput = update;
+			btnBlue.oninput = update;
+			btnWhite.oninput = update;
+			btnRed.min = '0';
+			btnRed.max = '100';
+			console.log(newCalibrations[2], String(parseInt(newCalibrations[2].substring(3, 5), 16)));
+			btnRed.value = String(parseInt(newCalibrations[2].substring(3, 5), 16));
+			btnBlue.min = '208';
+			btnBlue.max = '255';
+			btnBlue.value = String(parseInt(newCalibrations[1].substring(5, 7), 16));
+			btnWhite.min = '224';
+			btnWhite.max = '255';
+			btnWhite.value = String(parseInt(newCalibrations[0].substring(1, 3), 16));
+			calibrationContentRed.appendChild(btnRed);
+			calibrationContentBlue.appendChild(btnBlue);
+			calibrationContentWhite.appendChild(btnWhite);
 
-			['100', '80', '60', '40', '20'].forEach((num) => {
-				const porc = document.createElement('div');
-				porc.textContent = num;
-				porc.style.width = '59px';
-				porc.style.fontSize = '14px';
-				porc.style.fontWeight = '700';
-				settingsContentOpacityPorc.appendChild(porc);
-			});
+			calibrationContent.appendChild(calibrationContentGlasses);
+			calibrationContent.appendChild(calibrationContentBlue);
+			calibrationContent.appendChild(calibrationContentRed);
+			calibrationContent.appendChild(calibrationContentWhite);
 
-			settingsContent.appendChild(settingsContentBackground);
-			settingsContent.appendChild(settingsContentVariant);
-			settingsContent.appendChild(settingsContentOpacity[0]);
-			settingsContent.appendChild(settingsContentOpacityPorc);
-			settingsContent.appendChild(settingsContentOpacity[1]);
+			update();
 
 			// Texts
 			let title = 'Color Calibration';
@@ -1635,7 +1588,7 @@ class Game {
 
 			Swal({
 				title,
-				content: { element: settingsContent },
+				content: { element: calibrationContent },
 				closeOnEsc: true,
 				buttons: {
 					cancel: {
@@ -1650,9 +1603,7 @@ class Game {
 				}
 			}).then((val) => {
 				if (val) {
-					this.options.variant = newSettings.variant;
-					this.options.color = newSettings.color;
-					this.options.opacity = newSettings.opacity;
+					this.options.color = newCalibrations;
 					this.drawBack();
 					if (this.$cnvNext) {
 						this.$cnvNext.style.background = this.options.color[0];
